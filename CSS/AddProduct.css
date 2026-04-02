@@ -1,0 +1,89 @@
+body{
+    background-color: white;
+    margin: 0;
+}
+/* header */
+header{
+    background-color: rgb(19, 62, 111);
+    padding: 15px 40px;
+    color: white;
+}
+.header-menu{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header-logo{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: 'Times New Roman', Times, serif;
+    font-weight: bold;
+    font-size: 20px;
+}
+.header-logo img{
+    width: 50px;
+    height: 50px;
+    padding: 5px;
+    border: none;
+    border-radius: 30px;
+}
+/* main */
+main{
+    padding: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.table_add_product{
+    border: 2px solid black;
+    border-radius: 12px;
+    padding: 35px;
+    height: 650px;
+    width: 500px;
+    box-shadow: 0 4px 12px;
+}
+.table_add_product h2{
+    text-align: center;
+    font-size: 30px;
+    margin-bottom: 22px;
+}
+.table_add_product label{
+    font-size: 25px;
+}
+.table_add_product input,
+.table_add_product select{
+    width: 100%;
+    padding: 5px;
+    margin-bottom: 20px;
+    border: 1px solid black;
+    border-radius: 8px;
+}
+/* Nút */
+.btn{
+    text-align: center;
+}
+.btn_add{
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    width: 20%;
+    background-color: rgb(19, 62, 111);
+    color: white;
+}
+.btn_cancle{
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    width: 20%;
+    background-color: rgb(19, 62, 111);
+    color: white;
+}
+.btn_add:hover{
+    background-color: rgb(13, 41, 73);
+    transition: 0.3s;
+}
+.btn_cancle:hover{
+    background-color: rgb(13, 41, 73);
+    transition: 0.3s;
+}

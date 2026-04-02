@@ -1,0 +1,142 @@
+body{
+    background-color: white;
+    margin: 0;
+}
+/* header */
+header{
+    background-color: rgb(19, 62, 111);
+    padding: 15px 40px;
+    color: white;
+}
+.header-menu{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header-logo{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: 'Times New Roman', Times, serif;
+    font-weight: bold;
+    font-size: 20px;
+}
+.header-logo img{
+    width: 50px;
+    height: 50px;
+    padding: 5px;
+    border: none;
+    border-radius: 30px;
+}
+.header-nav ul{
+    list-style: none;
+    display: flex;
+    gap: 10px;
+}
+.header-nav li{
+    border: none;
+    border-radius: 20px;
+    padding: 15px;
+    background-color: white;
+    margin-right: 0px;
+}
+.header-nav li.active,
+.header-nav li:hover{
+    background-color: black;
+    transition: 0.5s;
+    transform: scale(1.03);
+}
+.header-nav li:hover a,
+.header-nav li.active a{
+    color: white;
+}
+.header-nav a{
+    color: black;
+    font-family: 'Times New Roman', Times, serif;
+    font-weight: bold;
+    text-decoration: none;
+}
+/* main */
+main{
+    padding: 30px;
+}
+h2{
+    color: black;
+    font-size: 50px;
+}
+h3{
+    color: black;
+    font-size: 30px;
+}
+/* Bảng giá thứ nhất */
+.table_price{
+    width: 75%;
+    border-collapse: collapse;
+    background-color: white;
+    margin: 20px auto;
+}
+.table_price th{
+    background-color: rgb(19, 62, 111);
+    color: white;
+    padding: 12px;
+    font-size: 25px;
+    font-weight: bold;
+    border: 2px solid #ddd;
+}
+.table_price td{
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid black;
+    font-size: 20px;
+    border: 2px solid #ddd;
+}
+/* Tìm kiếm sản phẩm */
+find-product{
+    gap: 10px;
+}
+.label_find{
+    font-size: 30px;
+}
+.input_find{
+    border-radius: 8px;
+    padding: 10px;
+    width: 50%;
+}
+.btn_find{
+    border: none;
+    border-radius: 10px;
+    background-color:rgb(19, 62, 111);
+    color: white;
+    padding: 12px;
+}
+/* Bảng thứ 2 */
+.table_items_price{
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    margin: 20px auto;
+}
+.table_items_price th{
+    background-color: rgb(19, 62, 111);
+    color: white;
+    padding: 12px;
+    font-size: 25px;
+    font-weight: bold;
+    border: 2px solid #ddd;
+}
+.table_items_price td{
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid black;
+    font-size: 20px;
+    border: 2px solid #ddd;
+}
+/* Nút cập nhật giá bán */
+.update_btn{
+    border: 1px solid black;
+    border-radius: 7px;
+    padding: 10px;
+    margin-left: 50px;
+    background-color: rgb(19, 62, 111);
+    color: white;
+}
