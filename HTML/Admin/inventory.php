@@ -15,8 +15,15 @@ $total_q = $conn->query("SELECT
     FROM products");
 $stats = $total_q->fetch_assoc();
 
+// Tìm số lượng sản phầm còn trong kho
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 5;
+
 // Lấy danh sách sản phẩm (Ưu tiên hàng sắp hết lên đầu)
-$products = $conn->query("SELECT * FROM products ORDER BY quantity ASC");
+$products = $conn->query("
+    SELECT * 
+    FROM products 
+    ORDER BY quantity ASC
+");
 ?>
 
 <!DOCTYPE html>
@@ -218,6 +225,28 @@ $products = $conn->query("SELECT * FROM products ORDER BY quantity ASC");
                 margin-left: 80px;
             }
         }
+
+        .Check_quantity_product {
+            display: flex;
+            gap: 10px;
+            margin: 15px;
+        }
+
+        .Check_quantity_product input {
+            padding: 10px;
+            width: 50%;
+            border-radius: 9px;
+            border: 1px solid black;
+        }
+
+        .Check_quantity_product button {
+            padding: 10px;
+            width: 10%;
+            border-radius: 9px;
+            border: 1px solid black;
+            background-color: black;
+            color: white;
+        }
     </style>
 </head>
 
@@ -261,6 +290,12 @@ $products = $conn->query("SELECT * FROM products ORDER BY quantity ASC");
             </div>
         </div>
 
+        <!-- Tìm số lượng sản phẩm -->
+        <form class="Check_quantity_product" method="GET">
+            <input type="number" name="limit" value="<?= $limit ?>" placeholder="Nhập số lượng tồn kho">
+            <button type="submit">Tìm kiếm</button>
+        </form>
+
         <div class="table-container">
             <table>
                 <thead>
@@ -282,14 +317,15 @@ $products = $conn->query("SELECT * FROM products ORDER BY quantity ASC");
                             <td><?= $row['unit'] ?? 'Cái' ?></td>
                             <td><?= number_format($row['cost_price'] ?? 0, 0, ',', '.') ?>đ</td>
                             <td>
-                                <?php if ($row['quantity'] > 5): ?>
-                                    <span class="badge badge-success">Còn hàng</span>
-                                <?php else: ?>
+                                <?php if ($row['quantity'] <= $limit): ?>
                                     <span class="badge badge-danger">Cần nhập kho</span>
+                                <?php else: ?>
+                                    <span class="badge badge-success">Còn hàng</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
-                    <?php endwhile; ?>
+                        <tr style="<?= ($row['quantity'] <= $limit) ? 'background:#fff1f0;' : '' ?>">
+                        <?php endwhile; ?>
                 </tbody>
             </table>
         </div>
