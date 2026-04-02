@@ -61,7 +61,17 @@ if (isset($_POST['update_product'])) {
     $status = $_POST['status'];
     $tech_info = $_POST['technical_info'];
 
-    $price = $cost_price * (1 + ($profit_margin / 100));
+    // Lấy giá vốn trung bình từ import_details
+    $avg_cost_query = $conn->query("
+        SELECT AVG(price) as avg_cost 
+        FROM import_details 
+        WHERE product_id = $id
+    ");
+
+    $avg_data = $avg_cost_query->fetch_assoc();
+    $avg_cost = $avg_data['avg_cost'] ?? 0;
+
+    $price = $avg_cost * (1 + ($profit_margin / 100));
 
     $stmt = $conn->prepare("UPDATE products SET name=?, sku=?, unit=?, cost_price=?, profit_margin=?, price=?, category=?, image_url=?, status=?, technical_info=? WHERE id=?");
     $stmt->bind_param("sssdidssisi", $name, $sku, $unit, $cost_price, $profit_margin, $price, $category, $image_url, $status, $tech_info, $id);
