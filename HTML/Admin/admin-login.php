@@ -33,7 +33,7 @@ session_start();
 
         <div class="wrapper active">
             <form action="../../PHP/auth.php" method="POST">
-                <h1 class="admin-title">Đăng nhập Admin</h1>
+                <h1>Đăng nhập Admin</h1>
                 <p class="subtitle">Chỉ dành cho quản trị viên</p>
                 
                 <div class="input-box">

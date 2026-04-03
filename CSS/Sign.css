@@ -15,8 +15,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #000; /* Nền đen sang trọng */
-  color: #fff;
+  background-color: white;
   overflow: hidden;
 }
 
@@ -33,22 +32,19 @@ body {
 .apple-logo {
   font-size: 45px;
   margin-bottom: 20px;
-  color: #fff;
+  color: black;
 }
 
 /* --- Wrapper (Các Form) --- */
 .wrapper {
   display: none; /* Ẩn mặc định */
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgb(32, 32, 32);
   backdrop-filter: blur(20px);
-  padding: 40px;
+  padding: 60px;
   border-radius: 25px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   opacity: 0;
-  transform: translateY(20px);
-  transition: all 0.4s ease;
 }
 
 /* Hiển thị form đang hoạt động */
@@ -62,7 +58,8 @@ h1 {
   font-size: 24px;
   font-weight: 600;
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 5px;
+  color: #0071e3;
 }
 
 .subtitle {
@@ -83,7 +80,7 @@ h1 {
   width: 100%;
   padding: 20px 15px 10px 15px;
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   border-radius: 12px;
   color: #fff;
   outline: none;
@@ -95,7 +92,6 @@ h1 {
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: #86868b;
   pointer-events: none;
   transition: 0.2s;
 }
@@ -104,7 +100,7 @@ h1 {
 .input-box input:focus ~ label,
 .input-box input:not(:placeholder-shown) ~ label {
   top: 12px;
-  font-size: 11px;
+  font-size: 13px;
   color: #0071e3;
 }
 
@@ -134,7 +130,7 @@ h1 {
   width: 100%;
   padding: 14px;
   background: #0071e3;
-  color: #fff;
+  color: white;
   border: none;
   border-radius: 12px;
   font-weight: 600;
