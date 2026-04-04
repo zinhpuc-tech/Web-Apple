@@ -4,7 +4,7 @@ include __DIR__ . '/../../PHP/db_config.php';
 
 // 1. Kiểm tra quyền Admin
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
-    echo "<script>alert('Bạn không có quyền truy cập!'); window.location='../HTML/User/Sign.php';</script>";
+    echo "<script>alert('Bạn không có quyền truy cập!'); window.location='admin-login.php';</script>";
     exit();
 }
 
