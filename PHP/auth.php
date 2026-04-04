@@ -74,7 +74,7 @@ if (isset($_POST['register'])) {
 // ====================== ĐĂNG NHẬP USER (Từ Modal hoặc Sign.php) ======================
 if (isset($_POST['login'])) {
     $email    = mysqli_real_escape_string($conn, trim($_POST['email'] ?? ''));
-    $password = $_POST['password'] ?? '';
+    $password = $_POST['password'];
 
     if (empty($email) || empty($password)) {
         echo "<script>alert('Vui lòng nhập email và mật khẩu!'); window.history.back();</script>";
@@ -86,7 +86,7 @@ if (isset($_POST['login'])) {
     $user = mysqli_fetch_assoc($result);
 
     // Kiểm tra mật khẩu và tồn tại user
-    if ($user && $password === $user['password']) {
+    if (password_verify($password,$user['password'])) {
         
         // Kiểm tra trạng thái khóa
         if ($user['status'] == 0) {
