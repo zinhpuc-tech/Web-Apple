@@ -5,6 +5,16 @@ if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
 include "../../PHP/db_connect.php";
+// LOAD GIỎ HÀNG MỚI
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
+} else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
+    $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
+}
 
 $keyword = isset($_GET['q']) ? trim($_GET['q']) : '';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;

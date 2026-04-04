@@ -1,6 +1,16 @@
 <?php
 session_start();
 include '../../PHP/db_config.php';
+// LOAD GIỎ HÀNG MỚI
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
+} else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
+    $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
+}
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: Sign.php");

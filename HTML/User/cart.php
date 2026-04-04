@@ -2,33 +2,40 @@
 session_start();
 include "../../PHP/db_connect.php";
 
-// 1. Khai báo tên Cookie (Phải khai báo TRƯỚC khi sử dụng)
-$cookie_name = "itronic_cart_backup";
-setcookie("itronic_cart_backup", json_encode($_SESSION['cart']), time() + (86400 * 30), "/");
-// 2. CƠ CHẾ HỒI PHỤC: Nếu Session trống nhưng Cookie vẫn còn hàng (do mới logout hoặc tắt máy)
-if (empty($_SESSION['cart']) && isset($_COOKIE[$cookie_name])) {
-    $decoded_cart = json_decode($_COOKIE[$cookie_name], true);
-    if (is_array($decoded_cart)) {
-        $_SESSION['cart'] = $decoded_cart;
-    }
+// ====================== LOAD GIỎ HÀNG THEO USER ======================
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
 }
 
-// 3. Hàm đồng bộ để dùng chung
-function syncCartToCookie($cart) {
-    global $cookie_name;
-    // Nếu giỏ hàng có hàng thì lưu 30 ngày, nếu trống thì xóa cookie
-    if (!empty($cart)) {
-        $json_data = json_encode($cart);
-        setcookie($cookie_name, $json_data, time() + (86400 * 30), "/");
+// Ưu tiên load từ DB nếu đã login
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
+} 
+// Chỉ dùng cookie nếu chưa login
+else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
+    $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
+}
+
+if (!is_array($_SESSION['cart'])) $_SESSION['cart'] = [];
+
+// Hàm đồng bộ giỏ hàng
+function syncCart() {
+    global $conn;
+    if (isset($_SESSION['user_id'])) {
+        saveCartToDB($conn, $_SESSION['user_id'], $_SESSION['cart']);
     } else {
-        setcookie($cookie_name, "", time() - 3600, "/");
+        // Lưu cookie cho khách
+        if (!empty($_SESSION['cart'])) {
+            setcookie('itronic_cart_backup', json_encode($_SESSION['cart']), time() + (86400 * 30), "/");
+        } else {
+            setcookie('itronic_cart_backup', "", time() - 3600, "/");
+        }
     }
 }
 
-// 4. Xử lý các hành động POST
+// Xử lý POST (cập nhật, xóa, xóa hết)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    // Cập nhật số lượng
     if (isset($_POST['update_cart'])) {
         if (isset($_POST['quantity']) && is_array($_POST['quantity'])) {
             foreach ($_POST['quantity'] as $id => $qty) {
@@ -40,31 +47,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
-            syncCartToCookie($_SESSION['cart']);
         }
     }
 
-    // Xóa từng món
     if (isset($_POST['remove_id'])) {
         $remove_id = (int)$_POST['remove_id'];
         $_SESSION['cart'] = array_filter($_SESSION['cart'], function($item) use ($remove_id) {
             return $item['id'] != $remove_id;
         });
         $_SESSION['cart'] = array_values($_SESSION['cart']);
-        syncCartToCookie($_SESSION['cart']);
     }
 
-    // Xóa sạch giỏ hàng
     if (isset($_POST['clear_cart'])) {
-        unset($_SESSION['cart']);
-        setcookie($cookie_name, "", time() - 3600, "/"); 
+        $_SESSION['cart'] = [];
     }
 
+    syncCart();           // ← Quan trọng: lưu lại sau khi thay đổi
     header("Location: cart.php");
     exit;
 }
 
-// 5. Tính tổng tiền
+// Tính tổng tiền
 $total_price = 0;
 if (!empty($_SESSION['cart'])) {
     foreach ($_SESSION['cart'] as $item) {

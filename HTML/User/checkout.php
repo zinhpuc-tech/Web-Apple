@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 }
 ?>
 
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>

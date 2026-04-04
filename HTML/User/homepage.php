@@ -5,6 +5,16 @@ if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
 include "../../PHP/db_connect.php";
+// LOAD GIỎ HÀNG MỚI
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+
+if (isset($_SESSION['user_id'])) {
+    $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
+} else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
+    $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
+}
 
 // Lấy danh sách iPhone và iPad (giới hạn 10 sản phẩm mới nhất)
 $sql_iphone = "SELECT * FROM products WHERE category = 'iphone' ORDER BY id DESC LIMIT 10";
