@@ -19,7 +19,7 @@ if (isset($_POST['admin_login'])) {
 
     if ($row = $result->fetch_assoc()) {
         // So sánh mật khẩu thuần
-        if ($password === $row['password']) {
+        if (password_verify($password,$row['password'])) {
 
             // Kiểm tra quyền Admin
             if (strtolower(trim($row['role'])) !== 'admin') {
