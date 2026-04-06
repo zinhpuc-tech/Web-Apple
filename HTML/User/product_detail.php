@@ -182,7 +182,7 @@ if (isset($_POST['add_to_cart'])) {
                         </a>
                     </div>
                 <?php else: ?>
-                    <a href="login.php" style="color: inherit; text-decoration: none;">
+                    <a href="Sign.php" style="color: inherit; text-decoration: none;">
                         <i class="fa-solid fa-circle-user" style="font-size: 24px;"></i>
                     </a>
                 <?php endif; ?>

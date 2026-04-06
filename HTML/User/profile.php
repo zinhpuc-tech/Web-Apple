@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../../PHP/db_config.php';
+include '../../PHP/db_connect.php';
 // LOAD GIỎ HÀNG MỚI
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];

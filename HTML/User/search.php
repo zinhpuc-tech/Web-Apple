@@ -187,7 +187,7 @@ function resolveImageSrc($url) {
                         </a>
                     </div>
                 <?php else: ?>
-                    <a href="login.php" style="color: inherit;">
+                    <a href="Sign.php" style="color: inherit;">
                         <i class="fa-solid fa-user-circle" style="cursor:pointer; font-size: 24px;"></i>
                     </a>
                 <?php endif; ?>

@@ -51,6 +51,7 @@ function resolveImageSrc($url) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../hinhanh/apple-icon.ico">
     <title>iPhone - Itronic</title>
     <link rel="stylesheet" href="../../CSS/homepage.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -172,7 +173,7 @@ function resolveImageSrc($url) {
                         </a>
                     </div>
                 <?php else: ?>
-                    <a href="login.php" style="color: inherit;">
+                    <a href="Sign.php" style="color: inherit;">
                         <i class="fa-solid fa-user-circle" style="cursor:pointer; font-size: 24px;"></i>
                     </a>
                 <?php endif; ?>
