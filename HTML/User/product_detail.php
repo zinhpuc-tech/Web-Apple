@@ -1,6 +1,17 @@
 <?php
 session_start();
 include "../../PHP/db_connect.php";
+// Check đường dẫn hình ảnh
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/600';
+
+    if (preg_match('#^https?://#i', $url)) return $url;
+    if (strpos($url, '/') === 0) return $url;
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+
+    return '../../' . ltrim($url, './');
+}
 
 // ====================== LOAD GIỎ HÀNG AN TOÀN ======================
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
@@ -72,7 +83,7 @@ if (isset($_POST['add_to_cart'])) {
                 'id'       => $product['id'],
                 'name'     => $product['name'],
                 'price'    => $product['price'],
-                'image'    => $product['image_url'],
+                'image' => resolveImageSrc($product['image_url']),
                 'quantity' => $qty_buy
             ];
         }
@@ -99,6 +110,7 @@ if (isset($_POST['add_to_cart'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="../../hinhanh/apple-icon.ico">
     <title><?= htmlspecialchars($product['name']) ?> - Itronic</title>
     <link rel="stylesheet" href="../../CSS/homepage.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -191,7 +203,7 @@ if (isset($_POST['add_to_cart'])) {
 
         <div class="detail-container">
             <div class="product-image">
-                <img src="<?= htmlspecialchars($product['image_url']) ?>" onerror="this.src='https://via.placeholder.com/600';">
+                <img src="<?= htmlspecialchars(resolveImageSrc($product['image_url'])) ?>">
             </div>
 
             <div class="product-info">

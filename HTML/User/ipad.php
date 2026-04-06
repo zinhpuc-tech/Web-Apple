@@ -34,6 +34,17 @@ $total_sql = "SELECT COUNT(*) as total FROM products $where";
 $total_result = $conn->query($total_sql);
 $total = $total_result ? $total_result->fetch_assoc()['total'] : 0;
 $total_pages = ceil($total / $per_page);
+// Check đường dẫn hình ảnh
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/600';
+
+    if (preg_match('#^https?://#i', $url)) return $url;
+    if (strpos($url, '/') === 0) return $url;
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+
+    return '../../' . ltrim($url, './');
+}
 ?>
 
 <!DOCTYPE html>
@@ -190,7 +201,7 @@ $total_pages = ceil($total / $per_page);
                 <?php while($row = $result->fetch_assoc()): ?>
                     <!-- Click toàn bộ card để xem chi tiết -->
                     <div class="product-card" onclick="window.location.href='product_detail.php?id=<?= $row['id'] ?>'">
-                        <img src="<?= htmlspecialchars($row['image_url']) ?>" 
+                        <img src="<?= htmlspecialchars(resolveImageSrc($row['image_url'])) ?>" 
                              alt="<?= htmlspecialchars($row['name']) ?>"
                              onerror="this.src='https://via.placeholder.com/400x280/F5F5F7/666?text=<?= urlencode($row['name']) ?>';">
                         <div style="padding:15px;">

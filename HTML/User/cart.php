@@ -74,6 +74,17 @@ if (!empty($_SESSION['cart'])) {
         $total_price += $item['price'] * $item['quantity'];
     }
 }
+// Check đường dẫn hình ảnh
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/600';
+
+    if (preg_match('#^https?://#i', $url)) return $url;
+    if (strpos($url, '/') === 0) return $url;
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+
+    return '/Web-Apple/' . ltrim($url, './');
+}
 ?>
 
 <!DOCTYPE html>
@@ -175,7 +186,7 @@ if (!empty($_SESSION['cart'])) {
                 <div class="cart-items">
                     <?php foreach ($_SESSION['cart'] as $item): ?>
                         <div class="cart-item">
-                            <img src="<?= htmlspecialchars($item['image']) ?>" 
+                            <img src="<?= htmlspecialchars(resolveImageSrc($item['image'])) ?>" 
                                  alt="<?= htmlspecialchars($item['name']) ?>"
                                  onerror="this.src='https://via.placeholder.com/100x80/F5F5F7/666?text=<?= urlencode($item['name']) ?>';">
 
