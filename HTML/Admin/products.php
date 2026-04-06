@@ -1,6 +1,17 @@
 <?php
 session_start();
-include __DIR__ . '/../../PHP/db_config.php';
+include __DIR__ . '/../../PHP/db_connect.php';
+// Check đường dẫn hình ảnh
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/600';
+
+    if (preg_match('#^https?://#i', $url)) return $url;
+    if (strpos($url, '/') === 0) return $url;
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+
+    return '../../' . ltrim($url, './');
+}
 
 // 1. Kiểm tra quyền Admin
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
@@ -247,7 +258,7 @@ if (isset($_GET['edit_id'])) {
                 while($row = $result->fetch_assoc()):
                 ?>
                 <tr>
-                    <td><img src="<?= $row['image_url'] ?>" class="product-img"></td>
+                    <td><img src="<?= resolveImageSrc($row['image_url']) ?>" class="product-img"></td>
                     <td>
                         <div style="font-weight: 600;"><?= htmlspecialchars($row['name']) ?></div>
                         <div style="font-size: 11px; color: var(--apple-gray);">SKU: <?= htmlspecialchars($row['sku']) ?></div>
