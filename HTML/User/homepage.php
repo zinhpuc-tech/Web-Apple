@@ -6,18 +6,7 @@ if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
 }
 include "../../PHP/db_connect.php";
 // Helper: chuẩn hóa đường dẫn ảnh trước khi render
-function resolveImageSrc($url) {
-    $url = trim($url ?? '');
-    if ($url === '') return 'https://via.placeholder.com/400x280/F5F5F7/666?text=No%20Image';
-    // nếu là URL đầy đủ
-    if (preg_match('#^https?://#i', $url)) return $url;
-    // nếu bắt đầu bằng / (từ gốc web) giữ nguyên
-    if (strpos($url, '/') === 0) return $url;
-    // nếu là đường dẫn tương đối đã có ./ hoặc ../ giữ nguyên
-    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
-    // mặc định, thêm ../../ để trở về root từ HTML/User
-    return '../../' . ltrim($url, './');
-}
+
 // LOAD GIỎ HÀNG MỚI
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
@@ -35,6 +24,19 @@ $res_iphone = $conn->query($sql_iphone);
 
 $sql_ipad = "SELECT * FROM products WHERE category = 'ipad' ORDER BY id DESC LIMIT 10";
 $res_ipad = $conn->query($sql_ipad);
+// check đường dẫn
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/400x280/F5F5F7/666?text=No%20Image';
+    // nếu là URL đầy đủ
+    if (preg_match('#^https?://#i', $url)) return $url;
+    // nếu bắt đầu bằng / (từ gốc web) giữ nguyên
+    if (strpos($url, '/') === 0) return $url;
+    // nếu là đường dẫn tương đối đã có ./ hoặc ../ giữ nguyên
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+    // mặc định, thêm ../../ để trở về root từ HTML/User
+    return '../../' . ltrim($url, './');
+}
 ?>
 
 <!DOCTYPE html>

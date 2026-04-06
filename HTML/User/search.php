@@ -52,6 +52,19 @@ if (!empty($keyword)) {
     $stmt->execute();
     $results = $stmt->get_result();
 }
+// check đường dẫn
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/400x280/F5F5F7/666?text=No%20Image';
+    // nếu là URL đầy đủ
+    if (preg_match('#^https?://#i', $url)) return $url;
+    // nếu bắt đầu bằng / (từ gốc web) giữ nguyên
+    if (strpos($url, '/') === 0) return $url;
+    // nếu là đường dẫn tương đối đã có ./ hoặc ../ giữ nguyên
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+    // mặc định, thêm ../../ để trở về root từ HTML/User
+    return '../../' . ltrim($url, './');
+}
 ?>
 
 <!DOCTYPE html>
@@ -200,7 +213,7 @@ if (!empty($keyword)) {
             <?php if(!empty($keyword) && $results && $results->num_rows > 0): ?>
                 <?php while($row = $results->fetch_assoc()): ?>
                     <div class="product-card" onclick="window.location.href='product_detail.php?id=<?= $row['id'] ?>'">
-                        <img src="<?= htmlspecialchars($row['image_url']) ?>" 
+                        <img src="<?= htmlspecialchars(resolveImageSrc($row['image_url'])) ?>" 
                              alt="<?= htmlspecialchars($row['name']) ?>"
                              onerror="this.src='https://via.placeholder.com/400x280/F5F5F7/666?text=<?= urlencode($row['name']) ?>';">
                         <div style="padding:20px;">
