@@ -18,7 +18,7 @@ if (isset($_SESSION['user_id'])) {
 // 3. XÓA COOKIE BACKUP CỦA KHÁCH (nếu có)
 setcookie('itronic_cart_backup', '', time() - 3600, '/');
 
-// 4. Chuyển về trang đăng nhập
-header("Location: ../HTML/User/Sign.php");
+// 4. Chuyển về trang chưa đăng nhập
+header("Location: ../HTML/User/homepage.php");
 exit();
 ?>
