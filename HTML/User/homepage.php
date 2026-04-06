@@ -5,6 +5,19 @@ if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
 include "../../PHP/db_connect.php";
+// Helper: chuẩn hóa đường dẫn ảnh trước khi render
+function resolveImageSrc($url) {
+    $url = trim($url ?? '');
+    if ($url === '') return 'https://via.placeholder.com/400x280/F5F5F7/666?text=No%20Image';
+    // nếu là URL đầy đủ
+    if (preg_match('#^https?://#i', $url)) return $url;
+    // nếu bắt đầu bằng / (từ gốc web) giữ nguyên
+    if (strpos($url, '/') === 0) return $url;
+    // nếu là đường dẫn tương đối đã có ./ hoặc ../ giữ nguyên
+    if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
+    // mặc định, thêm ../../ để trở về root từ HTML/User
+    return '../../' . ltrim($url, './');
+}
 // LOAD GIỎ HÀNG MỚI
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
@@ -36,19 +49,23 @@ $res_ipad = $conn->query($sql_ipad);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        .store-card, .acc-item {
+        .store-card,
+        .acc-item {
             background: white;
             border-radius: 18px;
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
             transition: all 0.3s ease;
             cursor: pointer;
         }
-        .store-card:hover, .acc-item:hover {
+
+        .store-card:hover,
+        .acc-item:hover {
             transform: translateY(-8px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
         }
-        .store-card img, .acc-item img {
+        .store-card img,
+        .acc-item img {
             width: 100%;
             height: 280px;
             object-fit: contain;
@@ -61,10 +78,12 @@ $res_ipad = $conn->query($sql_ipad);
         .acc-item img {
             height: 220px;
         }
-        .store-card .card-info, .acc-item .acc-info {
+        .store-card .card-info,
+        .acc-item .acc-info {
             padding: 16px;
         }
-        .store-card h3, .acc-item h4 {
+        .store-card h3,
+        .acc-item h4 {
             margin: 8px 0 6px;
             font-size: 17px;
         }
@@ -81,7 +100,7 @@ $res_ipad = $conn->query($sql_ipad);
     <nav class="navbar">
         <div class="nav-content">
             <a href="homepage.php" class="logo"><i class="fa-brands fa-apple"></i></a>
-            
+
             <ul class="nav-links">
                 <li><a href="homepage.php">Cửa hàng</a></li>
                 <li><a href="ipad.php">iPad</a></li>
@@ -93,26 +112,26 @@ $res_ipad = $conn->query($sql_ipad);
                 <button type="submit" style="position:absolute; left:18px; top:50%; transform:translateY(-50%); background:none; border:none; color:#86868b;">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </button>
-                <input type="text" name="q" placeholder="Tìm kiếm iPhone, iPad..." 
-                       style="padding:12px 20px 12px 50px; width:100%; border-radius:30px; border:1px solid #ddd;">
+                <input type="text" name="q" placeholder="Tìm kiếm iPhone, iPad..."
+                    style="padding:12px 20px 12px 50px; width:100%; border-radius:30px; border:1px solid #ddd;">
             </form>
 
             <div class="nav-icons" style="display: flex; align-items: center; gap: 20px;">
                 <!-- Giỏ hàng -->
                 <a href="cart.php" style="color: inherit; text-decoration: none; position:relative;">
                     <i class="fa-solid fa-bag-shopping" style="cursor:pointer; font-size: 22px;"></i>
-                    <?php if(!empty($_SESSION['cart'])): ?>
+                    <?php if (!empty($_SESSION['cart'])): ?>
                         <span style="position:absolute; top:-6px; right:-6px; background:#e00; color:white; font-size:12px; min-width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; padding:0 5px;">
                             <?= array_sum(array_column($_SESSION['cart'], 'quantity')) ?>
                         </span>
                     <?php endif; ?>
                 </a>
 
-                <?php if(isset($_SESSION['user_name'])): ?>
+                <?php if (isset($_SESSION['user_name'])): ?>
                     <div class="user-info" style="display: flex; align-items: center; gap: 12px;">
-                        <?php if(isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
-                            <a href="../Admin/dashboard.php" 
-                               style="background: #0071e3; color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 13px; text-decoration: none;">
+                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                            <a href="../Admin/dashboard.php"
+                                style="background: #0071e3; color: #fff; padding: 6px 16px; border-radius: 20px; font-size: 13px; text-decoration: none;">
                                 <i class="fa-solid fa-gauge-high"></i> Quản trị
                             </a>
                         <?php endif; ?>
@@ -156,11 +175,11 @@ $res_ipad = $conn->query($sql_ipad);
             <div class="carousel-wrapper">
                 <div class="carousel-track" style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 0;">
                     <?php if ($res_iphone && $res_iphone->num_rows > 0): ?>
-                        <?php while($row = $res_iphone->fetch_assoc()): ?>
+                        <?php while ($row = $res_iphone->fetch_assoc()): ?>
                             <div class="store-card" onclick="window.location.href='product_detail.php?id=<?= $row['id'] ?>'">
-                                <img src="<?= htmlspecialchars($row['image_url']) ?>" 
-                                     alt="<?= htmlspecialchars($row['name']) ?>"
-                                     onerror="this.src='https://via.placeholder.com/400x280/F5F5F7/666?text=<?= urlencode($row['name']) ?>';">
+                                <img src="<?= htmlspecialchars(resolveImageSrc($row['image_url'])) ?>"
+                                    alt="<?= htmlspecialchars($row['name']) ?>"
+                                    onerror="this.src='https://via.placeholder.com/400x280/F5F5F7/666?text=<?= urlencode($row['name']) ?>';">
                                 <div class="card-info">
                                     <span style="color:#0071e3; font-size:13px; font-weight:500;">IPHONE</span>
                                     <h3><?= htmlspecialchars($row['name']) ?></h3>
@@ -187,11 +206,11 @@ $res_ipad = $conn->query($sql_ipad);
             </div>
             <div class="accessory-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px;">
                 <?php if ($res_ipad && $res_ipad->num_rows > 0): ?>
-                    <?php while($row = $res_ipad->fetch_assoc()): ?>
+                    <?php while ($row = $res_ipad->fetch_assoc()): ?>
                         <div class="acc-item" onclick="window.location.href='product_detail.php?id=<?= $row['id'] ?>'">
-                            <img src="<?= htmlspecialchars($row['image_url']) ?>" 
-                                 alt="<?= htmlspecialchars($row['name']) ?>"
-                                 onerror="this.src='https://via.placeholder.com/300x220/F5F5F7/666?text=<?= urlencode($row['name']) ?>';">
+                            <img src="<?= htmlspecialchars(resolveImageSrc($row['image_url'])) ?>"
+                                alt="<?= htmlspecialchars($row['name']) ?>"
+                                onerror="this.src='https://via.placeholder.com/300x220/F5F5F7/666?text=<?= urlencode($row['name']) ?>';">
                             <div class="acc-info">
                                 <h4><?= htmlspecialchars($row['name']) ?></h4>
                                 <p style="color: #86868b; font-size:14px;"><?= htmlspecialchars($row['technical_info']) ?></p>
