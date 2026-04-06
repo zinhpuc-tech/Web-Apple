@@ -30,6 +30,13 @@ else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
 if (!is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
+// Check người dùng đã đăng nhập chưa
+if (isset($_POST['add_to_cart'])){
+    if (!isset($_SESSION['user_id'])){
+        header("Location: Sign.php");
+        exit;
+    }
+}
 
 // 1. Lấy ID sản phẩm
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;

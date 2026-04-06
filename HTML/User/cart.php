@@ -18,6 +18,12 @@ else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
 
 if (!is_array($_SESSION['cart'])) $_SESSION['cart'] = [];
 
+// Check người dùng
+if(!isset($_SESSION['user_id'])){
+    header("Location: Sign.php");
+    exit;
+}
+
 // Hàm đồng bộ giỏ hàng
 function syncCart() {
     global $conn;
