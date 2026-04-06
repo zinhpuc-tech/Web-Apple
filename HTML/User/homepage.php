@@ -255,14 +255,26 @@ function resolveImageSrc($url) {
     </div>
 
     <script>
+        const isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+        document.addEventListener("DOMContentLoaded", function() {
+            const modalLogin = document.getElementById("loginModal");
+
+            // Nếu chưa login → hiện sau 3 giây
+            if (!isLoggedIn) {
+                setTimeout(() => {
+                    modalLogin.style.display = "flex";
+                }, 3000);
+            }
+        });
+    </script>
+
+    <script>
         // Modal đăng nhập
         const modalLogin = document.getElementById("loginModal");
         const iconUser = document.getElementById("user-icon");
         const btnCloseLogin = document.querySelector(".close-btn");
 
-        if (iconUser) {
-            iconUser.addEventListener('click', () => modalLogin.style.display = "flex");
-        }
+        
         if (btnCloseLogin) {
             btnCloseLogin.addEventListener('click', () => modalLogin.style.display = "none");
         }
