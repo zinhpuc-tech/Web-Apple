@@ -47,7 +47,8 @@ $res_ipad = $conn->query($sql_ipad);
     <link rel="stylesheet" href="../../CSS/homepage.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+        
+
     <style>
         .store-card,
         .acc-item {
@@ -173,7 +174,7 @@ $res_ipad = $conn->query($sql_ipad);
         <section class="shelf-products">
             <h2 class="shelf-title">Thế hệ mới nhất. <span>Xem có gì mới.</span></h2>
             <div class="carousel-wrapper">
-                <div class="carousel-track" style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 0;">
+                <div class="carousel-track" id="carouselTrack" style="display: flex; gap: 20px; padding: 10px 0;">
                     <?php if ($res_iphone && $res_iphone->num_rows > 0): ?>
                         <?php while ($row = $res_iphone->fetch_assoc()): ?>
                             <div class="store-card" onclick="window.location.href='product_detail.php?id=<?= $row['id'] ?>'">
@@ -197,6 +198,7 @@ $res_ipad = $conn->query($sql_ipad);
                     <?php endif; ?>
                 </div>
             </div>
+            <input type="range" id="scrollBar" min="0" max="100" value="0" style="width:100%; margin-top:10px;">
         </section>
 
         <!-- iPad Grid -->
@@ -267,6 +269,27 @@ $res_ipad = $conn->query($sql_ipad);
         });
         document.addEventListener('keydown', (e) => {
             if (e.key === "Escape") modalLogin.style.display = "none";
+        });
+    </script>
+    <script >
+        document.addEventListener("DOMContentLoaded", function() {
+            const wrapper = document.querySelector(".carousel-wrapper"); // đổi
+            const track = document.getElementById("carouselTrack");
+            const scrollBar = document.getElementById("scrollBar");
+
+            if (!wrapper || !scrollBar) return;
+
+            scrollBar.addEventListener("input", () => {
+                const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+                wrapper.scrollLeft = (scrollBar.value / 100) * maxScroll;
+            });
+
+            wrapper.addEventListener("scroll", () => {
+                const maxScroll = wrapper.scrollWidth - wrapper.clientWidth;
+                if (maxScroll > 0) {
+                    scrollBar.value = (wrapper.scrollLeft / maxScroll) * 100;
+                }
+            });
         });
     </script>
 </body>
