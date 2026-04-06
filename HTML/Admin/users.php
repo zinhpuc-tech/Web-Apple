@@ -1,6 +1,6 @@
 <?php
 session_start();
-include __DIR__ . '/../../PHP/db_config.php';
+include __DIR__ . '/../../PHP/db_connect.php';
 
 if (isset($_GET['toggle_id'])) {
     $id = (int)$_GET['toggle_id'];

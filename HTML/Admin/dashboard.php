@@ -1,6 +1,6 @@
 <?php
 session_start();
-include __DIR__ . '/../../PHP/db_config.php';
+include __DIR__ . '/../../PHP/db_connect.php';
 
 // 1. Kiểm tra quyền Admin
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
