@@ -6,6 +6,30 @@ if (isset($_SESSION['user_name'])) {
     exit();
 }
 ?>
+<?php if (isset($_GET['success'])): ?>
+    <div class="alert-success">
+        <?= htmlspecialchars($_GET['success']); ?>
+    </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+    <div class="alert-error">
+        <?= htmlspecialchars($_GET['error']); ?>
+    </div>
+<?php endif; ?>
+<?php if (isset($_GET['success'])): ?>
+<script>
+    alert("<?= htmlspecialchars($_GET['success']); ?>");
+    window.history.replaceState({}, document.title, window.location.pathname);
+</script>
+<?php endif; ?>
+
+<?php if (isset($_GET['error'])): ?>
+<script>
+    alert("<?= htmlspecialchars($_GET['error']); ?>");
+    window.history.replaceState({}, document.title, window.location.pathname);
+</script>
+<?php endif; ?>
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -182,6 +206,23 @@ body {
     justify-content: space-between;
     font-size: 13px;
     margin-bottom: 15px;
+}
+.alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.alert-error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    text-align: center;
 }
 </style>
 </head>
