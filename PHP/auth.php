@@ -134,4 +134,38 @@ if (isset($_POST['login'])) {
         exit();
     }
 }
+// ====================== QUÊN MẬT KHẨU ======================
+if (isset($_POST['forgot_password'])) {
+    $email = trim($_POST['recover_email'] ?? '');
+
+    if (empty($email)) {
+        header("Location: ../HTML/User/Sign.php?error=" . urlencode("Vui lòng nhập email!"));
+        exit();
+    }
+
+    // Kiểm tra email có tồn tại không
+    $stmt = $conn->prepare("SELECT id, fullname FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($user = $result->fetch_assoc()) {
+
+        // 👉 Demo: reset mật khẩu về 123456
+        $new_password = "123456";
+        $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+
+        $update = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+        $update->bind_param("ss", $hashed, $email);
+        $update->execute();
+
+        // Redirect về login
+        header("Location: ../HTML/User/Sign.php?success=" . urlencode("Mật khẩu mới là 123456 (nên đổi lại!)"));
+        exit();
+
+    } else {
+        header("Location: ../HTML/User/Sign.php?error=" . urlencode("Email không tồn tại!"));
+        exit();
+    }
+}
 ?>
