@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
             
             $user_id = $_SESSION['user_id'] ?? null;
-            $stmt->bind_param("issssds", $user_id, $fullname, $phone, $address, $note, $payment_method, $total_price);
+            $stmt->bind_param("isssssd", $user_id, $fullname, $phone, $address, $note, $payment_method, $total_price);
             $stmt->execute();
             $order_id = $conn->insert_id;
 
