@@ -87,6 +87,23 @@ if (isset($_GET['edit_id'])) {
     $res = $conn->query("SELECT * FROM products WHERE id = $edit_id");
     $edit_data = $res->fetch_assoc();
 }
+// 5.Bar search
+$keyword = "";
+
+if (isset($_GET['keyword'])) {
+    $keyword = mysqli_real_escape_string($conn, $_GET['keyword']);
+    
+    $sql = "SELECT * FROM products 
+        WHERE name LIKE '%$keyword%' 
+        OR sku LIKE '%$keyword%' 
+        OR category LIKE '%$keyword%' 
+        ORDER BY id DESC";
+} 
+else {
+    $sql = "SELECT * FROM products ORDER BY id DESC";
+}
+
+$result = $conn->query($sql);
 ?>
 
 <!DOCTYPE html>
@@ -155,6 +172,37 @@ if (isset($_GET['edit_id'])) {
 
         .alert { padding: 15px; border-radius: 12px; margin-bottom: 25px; font-weight: 500; }
         .alert-success { background: #e3f9e5; color: #1f7a28; border: 1px solid #cdedcf; }
+        .bar_search{
+            display: flex;
+            gap: 10px;
+            margin: 5px 10px;
+        }
+        .bar_search input{
+            padding: 15px;
+            width: 75%;
+        }
+        .find_btn{
+            padding: 15px;
+            height: 45px;
+            border: none;
+            border-radius: 8px;
+            background-color: black;
+            color: white;
+        }
+        .clear_btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 45px;
+            height: 45px;
+            background: #ff3b30;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .clear_btn:hover {background: #d9362b;}
     </style>
 </head>
 <body>
@@ -177,6 +225,14 @@ if (isset($_GET['edit_id'])) {
         <h2>Quản lý kho sản phẩm</h2>
         <div style="color: var(--apple-gray); font-weight: 500;"><i class="far fa-calendar-alt"></i> <?php echo date('d/m/Y'); ?></div>
     </div>
+
+    <form method="GET" class="bar_search">
+        <input type="text" name="keyword" value="<?= htmlspecialchars($keyword) ?>" placeholder="Nhập sản phẩm bạn muốn tìm kiếm">
+        <button class="find_btn" type="submit">Tìm kiếm</button>
+        <?php if (!empty($keyword)): ?>
+            <a href="products.php" class="clear_btn">✖</a>
+        <?php endif; ?>
+    </form>
 
     <?php if($message): ?>
         <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= $message ?></div>
@@ -254,7 +310,6 @@ if (isset($_GET['edit_id'])) {
             </thead>
             <tbody>
                 <?php
-                $result = $conn->query("SELECT * FROM products ORDER BY id DESC");
                 while($row = $result->fetch_assoc()):
                 ?>
                 <tr>
@@ -294,6 +349,13 @@ if (isset($_GET['edit_id'])) {
                     </td>
                 </tr>
                 <?php endwhile; ?>
+                <?php if($result->num_rows == 0): ?>
+                <tr>
+                    <td colspan="7" style="text-align:center; color:red;">
+                        Không tìm thấy sản phẩm!
+                    </td>
+                </tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>

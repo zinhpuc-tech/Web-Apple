@@ -168,9 +168,9 @@ $orders = $conn->query($sql);
     <form action="update_order_status.php" method="POST" style="display: flex; gap: 5px;">
         <input type="hidden" name="order_id" value="<?= $row['id'] ?>">
         <select name="new_status" class="status-select">
-            <option value="Chờ duyệt" <?= $row['status'] == 'Chờ duyệt' ? 'selected' : '' ?>>Chờ duyệt</option>
-            <option value="Đang giao" <?= $row['status'] == 'Đang giao' ? 'selected' : '' ?>>Đang giao</option>
-            <option value="Hoàn tất" <?= $row['status'] == 'Hoàn tất' ? 'selected' : '' ?>>HOÀN TẤT</option>
+            <option value="pending" <?= $row['status'] == 'pending' ? 'selected' : '' ?>>Chờ duyệt</option>
+            <option value="processing" <?= $row['status'] == 'processing' ? 'selected' : '' ?>>Đang giao</option>
+            <option value="completed" <?= $row['status'] == 'completed' ? 'selected' : '' ?>>HOÀN TẤT</option>
         </select>
         <button type="submit" name="btn_save" class="btn-save">Lưu</button>
     </form>

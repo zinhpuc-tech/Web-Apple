@@ -108,7 +108,7 @@ if (isset($_POST['save_import'])) {
         .btn-add { background: #f5f5f7; border: 1px dashed var(--apple-blue); color: var(--apple-blue); padding: 15px; width: 100%; cursor: pointer; margin: 15px 0; border-radius: 12px; font-weight: 600; transition: 0.3s; }
         .btn-add:hover { background: #e8f4ff; }
 
-        .btn-submit { background: var(--apple-blue); color: white; border: none; padding: 14px 35px; border-radius: 10px; cursor: pointer; font-weight: 600; float: right; transition: 0.3s; }
+        .btn-submit { background: var(--apple-blue); color: white; border: none; padding: 14px 35px; border-radius: 10px; cursor: pointer; font-weight: 600; float: right; transition: 0.3s; margin: 8px; }
         .btn-submit:hover { background: #0077ed; }
 
         .btn-remove { color: #ff3b30; border: none; background: none; cursor: pointer; font-size: 20px; }
@@ -182,6 +182,9 @@ if (isset($_POST['save_import'])) {
 
             <button type="submit" name="save_import" class="btn-submit">
                 <i class="fas fa-save"></i> Xác nhận & Cập nhật giá
+            </button>
+            <button type="button" class="btn-submit" onclick="window.location.href='AddProduct.php'">
+                <i class="fas fa-save"></i> thêm sản phẩm
             </button>
         </form>
     </div>

@@ -119,7 +119,7 @@ $products = $conn->query("SELECT * FROM products ORDER BY quantity ASC");
         <a href="dashboard.php"><i class="fas fa-tachometer-alt"></i> <span>Dashboard</span></a>
         <a href="users.php"><i class="fas fa-users"></i> <span>Người dùng</span></a>
         <a href="products.php"><i class="fas fa-box"></i> <span>Sản phẩm</span></a>
-        <a href="import-goods.php"><i class="fas fa-file-import"></i> <span>Nhập hàng</span></a>
+        <a href="import-goods.php"><i class="fas fa-file-import"></i> <span>Nhập kho hàng</span></a>
         <a href="inventory.php" class="active"><i class="fas fa-warehouse"></i> <span>Tồn kho</span></a>
         <a href="orders.php"><i class="fas fa-shopping-cart"></i> <span>Đơn hàng</span></a>
         
