@@ -1,11 +1,11 @@
 <?php
 session_start();
-include 'db_connect.php';        // ← Sửa thành db_connect.php (khuyến nghị)
+include 'db_connect.php';
 
 // ====================== ĐĂNG NHẬP ADMIN ======================
 if (isset($_POST['admin_login'])) {
-    $email    = trim($_POST['email']);
-    $password = $_POST['password'];
+    $email    = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
     if (empty($email) || empty($password)) {
         header("Location: ../HTML/Admin/admin-login.php?error=" . urlencode("Vui lòng nhập đầy đủ!"));
@@ -30,13 +30,12 @@ if (isset($_POST['admin_login'])) {
                 exit();
             }
 
-            // === LOGIN ADMIN THÀNH CÔNG ===
+            // Login Admin thành công
             session_unset(); 
             $_SESSION['user_id']   = $row['id'];
             $_SESSION['user_name'] = $row['fullname'];
             $_SESSION['user_role'] = 'admin';
 
-            // Load giỏ hàng từ database theo user_id
             unset($_SESSION['cart']);
             $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
 
@@ -48,7 +47,7 @@ if (isset($_POST['admin_login'])) {
     exit();
 }
 
-// ====================== ĐĂNG KÝ ======================
+// ====================== ĐĂNG KÝ (Đã chỉnh theo data mẫu) ======================
 if (isset($_POST['register'])) {
     $fullname = trim($_POST['fullname'] ?? '');
     $email    = trim($_POST['email'] ?? '');
@@ -59,35 +58,54 @@ if (isset($_POST['register'])) {
         exit();
     }
 
-    $fullname = mysqli_real_escape_string($conn, $fullname);
-    $email    = mysqli_real_escape_string($conn, $email);
-    
-    $hashed_password = password_hash($password, PASSWORD_DEFAULT);   // Nên hash password
+    if (strlen($password) < 6) {
+        echo "<script>alert('Mật khẩu phải có ít nhất 6 ký tự!'); window.history.back();</script>";
+        exit();
+    }
 
-    $sql = "INSERT INTO users (fullname, email, password, role, status) 
-            VALUES ('$fullname', '$email', '$hashed_password', 'member', 1)";
+    // Kiểm tra email đã tồn tại chưa
+    $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $stmt->store_result();
 
-    if (mysqli_query($conn, $sql)) {
+    if ($stmt->num_rows > 0) {
+        echo "<script>alert('Email này đã được sử dụng! Vui lòng dùng email khác.'); window.history.back();</script>";
+        $stmt->close();
+        exit();
+    }
+    $stmt->close();
+
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
+    $stmt = $conn->prepare("INSERT INTO users (fullname, email, password, role, status) 
+                            VALUES (?, ?, ?, 'customer', 1)");
+    $stmt->bind_param("sss", $fullname, $email, $hashed_password);
+
+    if ($stmt->execute()) {
         echo "<script>alert('Đăng ký thành công! Vui lòng đăng nhập.'); window.location='../HTML/User/Sign.php';</script>";
     } else {
-        echo "<script>alert('Lỗi: Email đã tồn tại!'); window.history.back();</script>";
+        echo "<script>alert('Đăng ký thất bại! Vui lòng thử lại.'); window.history.back();</script>";
     }
+    $stmt->close();
     exit();
 }
 
-// ====================== ĐĂNG NHẬP USER (Quan trọng nhất) ======================
+// ====================== ĐĂNG NHẬP USER ======================
 if (isset($_POST['login'])) {
-    $email    = mysqli_real_escape_string($conn, trim($_POST['email'] ?? ''));
-    $password = $_POST['password'];
+    $email    = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
     if (empty($email) || empty($password)) {
         echo "<script>alert('Vui lòng nhập email và mật khẩu!'); window.history.back();</script>";
         exit();
     }
 
-    $query = "SELECT * FROM users WHERE email = '$email'";
-    $result = mysqli_query($conn, $query);
-    $user = mysqli_fetch_assoc($result);
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
 
     if ($user && password_verify($password, $user['password'])) {
         
@@ -96,18 +114,16 @@ if (isset($_POST['login'])) {
             exit();
         }
 
-        // === LOGIN USER THÀNH CÔNG - ĐÃ SỬA ĐỂ FIX GIỎ HÀNG ===
+        // Login User thành công
         session_unset(); 
         
         $_SESSION['user_id']   = $user['id'];
         $_SESSION['user_name'] = $user['fullname'];
-        $_SESSION['user_role'] = strtolower(trim($user['role']));
+        $_SESSION['user_role'] = strtolower(trim($user['role'] ?? 'customer'));
 
-        // Load giỏ hàng cá nhân từ database
         unset($_SESSION['cart']);
         $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
 
-        // Xóa cookie backup của khách vãng lai
         setcookie('itronic_cart_backup', '', time() - 3600, '/');
 
         header("Location: ../HTML/User/homepage.php");
