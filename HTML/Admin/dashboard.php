@@ -14,9 +14,18 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
 $order_count_q = $conn->query("SELECT COUNT(id) as total FROM orders");
 $total_orders = ($order_count_q) ? $order_count_q->fetch_assoc()['total'] : 0;
 
-// Doanh thu thực tế (Chỉ tính các đơn hàng đã 'completed' hoặc 'Đã giao')
-$revenue_q = $conn->query("SELECT SUM(total_amount) as total_rev FROM orders WHERE status = 'completed' OR status = 'Đã giao'");
-$total_revenue = ($revenue_q) ? $revenue_q->fetch_assoc()['total_rev'] : 0;
+// Doanh thu thực tế (Chỉ tính các đơn hàng đã 'completed')
+$revenue_q = $conn->query("
+    SELECT SUM(total_amount) as total_rev 
+    FROM orders 
+    WHERE status = 'completed'
+");
+
+$row_rev = $revenue_q ? $revenue_q->fetch_assoc() : null;
+
+$total_revenue = ($row_rev && $row_rev['total_rev']) 
+    ? $row_rev['total_rev'] 
+    : 0;
 
 // B. Thống kê Người dùng & Sản phẩm
 $user_q = $conn->query("SELECT COUNT(id) as total FROM users WHERE role = 'customer'");

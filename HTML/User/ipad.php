@@ -161,6 +161,11 @@ function resolveImageSrc($url) {
                     <?php endif; ?>
                 </a>
 
+                <!-- Đơn hàng -->
+                 <a href="my_order.php" title="Đơn hàng của tôi" style="color: inherit; text-decoration: none;">
+                    <i class="fa-solid fa-box"></i>
+                </a>
+
                 <?php if(isset($_SESSION['user_name'])): ?>
                     <div class="user-info" style="display: flex; align-items: center; gap: 12px;">
                         <?php if(isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>

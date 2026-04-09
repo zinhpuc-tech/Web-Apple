@@ -15,6 +15,9 @@ if (isset($_POST['btn_save'])) {
     $sql = "UPDATE orders SET status = '$new_status' WHERE id = $order_id";
 
     if ($conn->query($sql)) {
+        if ($new_status == 'cancelled') {
+            $conn->query("DELETE FROM orders WHERE id = $order_id");
+        }
         // Sau khi update xong, quay lại trang quản lý đơn hàng
         header("Location: orders.php?msg=success");
         exit();
