@@ -308,6 +308,12 @@ body {
             </div>
 
             <div class="input-box">
+                <input type="text" name="address" required>
+                <i class="fa-solid fa-location-dot"></i>
+                <label>Địa chỉ</label>
+            </div>
+
+            <div class="input-box">
                 <input type="password" name="password" id="reg_pass" required>
                 <i class="fa-solid fa-eye" onclick="togglePass('reg_pass', this)"></i>
                 <label>Mật khẩu</label>

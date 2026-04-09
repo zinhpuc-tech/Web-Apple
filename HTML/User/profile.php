@@ -1,6 +1,7 @@
 <?php
 session_start();
 include '../../PHP/db_connect.php';
+include '../../PHP/cart_functions.php';   // ← THÊM DÒNG NÀY
 
 // LOAD GIỎ HÀNG MỚI
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
@@ -31,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $new_phone      = trim($_POST['phone']);
     $new_gender     = $_POST['gender'] ?? '';
     $new_dob        = $_POST['date_of_birth'] ?? '';
+    $new_address = trim($_POST['address'] ?? '');
 
     if (!empty($new_fullname)) {
         $new_fullname = mysqli_real_escape_string($conn, $new_fullname);
@@ -39,11 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $new_dob      = mysqli_real_escape_string($conn, $new_dob);
 
         $sql = "UPDATE users SET 
-                    fullname = '$new_fullname', 
-                    phone = '$new_phone', 
-                    gender = '$new_gender', 
-                    date_of_birth = '$new_dob' 
-                WHERE id = $user_id";
+            fullname = '$new_fullname', 
+            phone = '$new_phone', 
+            gender = '$new_gender', 
+            date_of_birth = '$new_dob',
+            address = '$new_address' 
+        WHERE id = $user_id";
         
         if (mysqli_query($conn, $sql)) {
             $_SESSION['user_name'] = $new_fullname;
@@ -283,6 +286,12 @@ $user = mysqli_fetch_assoc($result);
         <div class="form-group">
             <label>Ngày tháng năm sinh</label>
             <input type="date" name="date_of_birth" value="<?php echo htmlspecialchars($user['date_of_birth'] ?? ''); ?>">
+        </div>
+
+        <!-- Sau trường ngày sinh -->
+        <div class="form-group">
+            <label>Địa chỉ giao hàng mặc định</label>
+            <input type="text" name="address" value="<?php echo htmlspecialchars($user['address'] ?? ''); ?>" required>
         </div>
 
         <div class="btn-group">

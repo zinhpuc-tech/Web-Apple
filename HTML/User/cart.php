@@ -1,25 +1,29 @@
 <?php
 session_start();
-include "../../PHP/db_connect.php";
 
-// ====================== LOAD GIỎ HÀNG THEO USER ======================
+// Load giỏ hàng từ cookie nếu session mất
+if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
+    $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
+}
+
+include "../../PHP/db_connect.php";
+include "../../PHP/cart_functions.php";
+
+// ====================== LOAD GIỎ HÀNG ======================
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
-// Ưu tiên load từ DB nếu đã login
 if (isset($_SESSION['user_id'])) {
     $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
-} 
-// Chỉ dùng cookie nếu chưa login
-else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
+} else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
 }
 
 if (!is_array($_SESSION['cart'])) $_SESSION['cart'] = [];
 
-// Check người dùng
-if(!isset($_SESSION['user_id'])){
+// Yêu cầu phải đăng nhập mới vào giỏ hàng
+if (!isset($_SESSION['user_id'])) {
     header("Location: Sign.php");
     exit;
 }
@@ -30,7 +34,6 @@ function syncCart() {
     if (isset($_SESSION['user_id'])) {
         saveCartToDB($conn, $_SESSION['user_id'], $_SESSION['cart']);
     } else {
-        // Lưu cookie cho khách
         if (!empty($_SESSION['cart'])) {
             setcookie('itronic_cart_backup', json_encode($_SESSION['cart']), time() + (86400 * 30), "/");
         } else {
@@ -39,7 +42,7 @@ function syncCart() {
     }
 }
 
-// Xử lý POST (cập nhật, xóa, xóa hết)
+// Xử lý cập nhật, xóa, xóa hết
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (isset($_POST['update_cart'])) {
@@ -68,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['cart'] = [];
     }
 
-    syncCart();           // ← Quan trọng: lưu lại sau khi thay đổi
+    syncCart();           // Lưu lại sau khi thay đổi
     header("Location: cart.php");
     exit;
 }
@@ -80,16 +83,15 @@ if (!empty($_SESSION['cart'])) {
         $total_price += $item['price'] * $item['quantity'];
     }
 }
-// Check đường dẫn hình ảnh
+
+// Hàm resolve ảnh
 function resolveImageSrc($url) {
     $url = trim($url ?? '');
     if ($url === '') return 'https://via.placeholder.com/600';
-
     if (preg_match('#^https?://#i', $url)) return $url;
     if (strpos($url, '/') === 0) return $url;
     if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
-
-    return '/Web-Apple/' . ltrim($url, './');
+    return '../../' . ltrim($url, './');
 }
 ?>
 
@@ -115,7 +117,7 @@ function resolveImageSrc($url) {
         }
         .cart-item img { width: 100%; height: 80px; object-fit: contain; background: #f8f8f8; border-radius: 8px; }
         .cart-item h4 { margin: 0 0 5px 0; font-size: 16px; }
-        .quantity-input { width: 70px; padding: 8px; text-align: center; border: 1px solid #ddd; border-radius: 8px; }
+        .quantity-input { width: 80px; padding: 8px; text-align: center; border: 1px solid #ddd; border-radius: 8px; }
         .total { font-size: 24px; font-weight: 600; color: #0071e3; text-align: right; margin: 30px 0; }
         .btn {
             padding: 12px 28px;
@@ -136,7 +138,6 @@ function resolveImageSrc($url) {
 </head>
 <body>
 
-    <!-- Navbar giống các trang khác (có tên tk + đăng xuất) -->
     <nav class="navbar">
         <div class="nav-content">
             <a href="homepage.php" class="logo"><i class="fa-brands fa-apple"></i></a>
@@ -159,8 +160,7 @@ function resolveImageSrc($url) {
                     <i class="fa-solid fa-bag-shopping" style="font-size: 22px;"></i>
                 </a>
 
-                <!-- Đơn hàng -->
-                 <a href="my_order.php" title="Đơn hàng của tôi" style="color: inherit; text-decoration: none;">
+                <a href="my_order.php" title="Đơn hàng của tôi" style="color: inherit; text-decoration: none;">
                     <i class="fa-solid fa-box"></i>
                 </a>
 

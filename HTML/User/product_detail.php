@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "../../PHP/db_connect.php";
+include "../../PHP/cart_functions.php";
 // Check đường dẫn hình ảnh
 function resolveImageSrc($url) {
     $url = trim($url ?? '');

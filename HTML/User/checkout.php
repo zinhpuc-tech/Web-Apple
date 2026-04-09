@@ -1,29 +1,33 @@
 <?php
 session_start();
-// Thêm đoạn này ngay sau session_start(); ở homepage.php, iphone.php...
+
 if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
+
 include "../../PHP/db_connect.php";
+include "../../PHP/cart_functions.php";
+include "../../phpqrcode/qrlib.php";
 
-// ====================== 1. BẢO VỆ GIỎ HÀNG ======================
-if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart']) || count($_SESSION['cart']) === 0) {
-    // Nếu đã đặt hàng thành công (vừa unset xong) thì không chuyển hướng ngay để khách xem thông báo
-    if (!isset($_GET['ordered'])) {
-        header("Location: cart.php");
-        exit;
-    }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: Sign.php");
+    exit;
 }
 
-// ====================== 2. TÍNH TỔNG TIỀN ======================
+$user_id = $_SESSION['user_id'];
+
+// Lấy thông tin user (địa chỉ mặc định)
+$user_stmt = $conn->prepare("SELECT fullname, phone, address FROM users WHERE id = ?");
+$user_stmt->bind_param("i", $user_id);
+$user_stmt->execute();
+$user = $user_stmt->get_result()->fetch_assoc() ?? [];
+
+// Tính tổng tiền
 $total_price = 0;
-if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])) {
-    foreach ($_SESSION['cart'] as $item) {
-        $total_price += (float)($item['price'] ?? 0) * (int)($item['quantity'] ?? 0);
-    }
+foreach ($_SESSION['cart'] ?? [] as $item) {
+    $total_price += ($item['price'] ?? 0) * ($item['quantity'] ?? 0);
 }
 
-// ====================== 3. XỬ LÝ ĐẶT HÀNG & TRỪ KHO ======================
 $error = '';
 $success = '';
 
@@ -35,73 +39,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $payment_method = $_POST['payment_method'] ?? 'COD';
 
     if ($fullname && $phone && $address) {
-        // Bắt đầu Transaction để đảm bảo an toàn dữ liệu
         $conn->begin_transaction();
-
         try {
-            // A. Lưu đơn hàng chính
             $stmt = $conn->prepare("INSERT INTO orders 
                 (user_id, full_name, phone, address, note, payment_method, total_amount, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
             
-            $user_id = $_SESSION['user_id'] ?? null;
             $stmt->bind_param("isssssd", $user_id, $fullname, $phone, $address, $note, $payment_method, $total_price);
             $stmt->execute();
             $order_id = $conn->insert_id;
 
-            // B. Chuẩn bị truy vấn chi tiết và cập nhật kho
             $stmt_item = $conn->prepare("INSERT INTO order_items (order_id, product_id, product_name, quantity, price) VALUES (?, ?, ?, ?, ?)");
-            $stmt_update_stock = $conn->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
+            $stmt_stock = $conn->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ? AND quantity >= ?");
 
             foreach ($_SESSION['cart'] as $item) {
-                $p_id = $item['id'];
-                $p_qty = (int)$item['quantity'];
-                $p_name = $item['name'];
-                $p_price = $item['price'];
-
-                // Lưu chi tiết
-                $stmt_item->bind_param("iisid", $order_id, $p_id, $p_name, $p_qty, $p_price);
+                $stmt_item->bind_param("iisid", $order_id, $item['id'], $item['name'], $item['quantity'], $item['price']);
                 $stmt_item->execute();
 
-                // Cập nhật kho (Trừ số lượng)
-                $stmt_update_stock->bind_param("iii", $p_qty, $p_id, $p_qty);
-                $stmt_update_stock->execute();
+                $stmt_stock->bind_param("iii", $item['quantity'], $item['id'], $item['quantity']);
+                $stmt_stock->execute();
 
-                if ($stmt_update_stock->affected_rows === 0) {
-                    throw new Exception("Sản phẩm <strong>$p_name</strong> không đủ số lượng trong kho!");
+                if ($stmt_stock->affected_rows === 0) {
+                    throw new Exception("Sản phẩm " . htmlspecialchars($item['name']) . " không đủ hàng!");
                 }
             }
 
             $conn->commit();
-            $success = "Đặt hàng thành công! Mã đơn hàng: #" . str_pad($order_id, 6, '0', STR_PAD_LEFT);
 
-            // ===== FIX GIỎ HÀNG =====
             $_SESSION['cart'] = [];
+            $conn->query("DELETE FROM user_carts WHERE user_id = $user_id");
+            setcookie('itronic_cart_backup', '', time() - 3600, '/');
 
-            // Xóa DB cart nếu có
-            if (isset($_SESSION['user_id'])) {
-                $uid = $_SESSION['user_id'];
-                $conn->query("DELETE FROM user_carts WHERE user_id = $uid");
-            }
-
-            // Xóa cookie
-            setcookie('itronic_cart_backup', "", time() - 3600, "/");
-
-            // ========================
-
-            header("Location: my_order.php");
+            header("Location: my_order.php?success=1");
             exit();
-            
+
         } catch (Exception $e) {
             $conn->rollback();
-            $error = "Lỗi: " . $e->getMessage();
+            $error = $e->getMessage();
         }
     } else {
-        $error = "Vui lòng nhập đầy đủ thông tin bắt buộc (*)!";
+        $error = "Vui lòng nhập đầy đủ thông tin bắt buộc!";
     }
 }
 ?>
-
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -115,107 +95,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         .checkout-container { max-width: 1200px; margin: 40px auto; padding: 20px; display: grid; grid-template-columns: 1fr 420px; gap: 40px; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; outline: none; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 12px; font-size: 16px; }
         .order-summary { background: #f8f9fa; padding: 25px; border-radius: 16px; position: sticky; top: 20px; }
-        .btn-checkout { width: 100%; padding: 16px; background: #0071e3; color: white; border: none; border-radius: 30px; font-size: 18px; font-weight: 600; margin-top: 20px; cursor: pointer; transition: 0.3s; }
-        .btn-checkout:hover { background: #005bb5; }
-        .bank-info { background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 12px; margin-top: 15px; }
+        .btn-checkout { width: 100%; padding: 16px; background: #0071e3; color: white; border: none; border-radius: 30px; font-size: 18px; font-weight: 600; margin-top: 20px; cursor: pointer; }
+        .bank-info { background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 12px; margin-top: 10px; display: none; }
         .alert { padding: 15px; border-radius: 12px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="nav-content">
-            <a href="homepage.php" class="logo"><i class="fa-brands fa-apple"></i></a>
-            <ul class="nav-links">
-                <li><a href="homepage.php">Cửa hàng</a></li>
-                <li><a href="ipad.php">iPad</a></li>
-                <li><a href="iphone.php">iPhone</a></li>
-            </ul>
-            <div class="nav-icons" style="display: flex; align-items: center; gap: 20px;">
-                <a href="cart.php" style="color: inherit; text-decoration: none;"><i class="fa-solid fa-bag-shopping" style="font-size: 22px;"></i></a>
-                <?php if(isset($_SESSION['user_name'])): ?>
-                    <span style="font-size: 14px; font-weight: 500;">Hi, <?= htmlspecialchars($_SESSION['user_name']) ?></span>
-                <?php endif; ?>
-            </div>
-        </div>
-    </nav>
-
-    <main class="checkout-container">
-        <div>
-            <h1>Thông tin thanh toán</h1>
-
-            <?php if($error): ?>
-                <div class="alert" style="color:red; background:#ffebee;"><?= $error ?></div>
-            <?php endif; ?>
-
-            <?php if($success): ?>
-                <div style="text-align:center; padding: 40px; background:#e8f5e9; border-radius:16px;">
-                    <h2 style="color:green;"><?= $success ?></h2>
-                    <p>Đơn hàng của bạn đang được xử lý.</p>
-                    <a href="homepage.php" style="display:inline-block; margin-top:20px; background:#0071e3; color:white; padding:12px 30px; border-radius:25px; text-decoration:none;">Tiếp tục mua sắm</a>
-                </div>
-            <?php else: ?>
-                <form method="POST">
-                    <div class="form-group">
-                        <label>Họ và tên <span style="color:red;">*</span></label>
-                        <input type="text" name="fullname" required value="<?= htmlspecialchars($_POST['fullname'] ?? '') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Số điện thoại <span style="color:red;">*</span></label>
-                        <input type="tel" name="phone" required value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Địa chỉ giao hàng <span style="color:red;">*</span></label>
-                        <input type="text" name="address" required value="<?= htmlspecialchars($_POST['address'] ?? '') ?>">
-                    </div>
-                    <div class="form-group">
-                        <label>Ghi chú đơn hàng</label>
-                        <textarea name="note" rows="3"><?= htmlspecialchars($_POST['note'] ?? '') ?></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Phương thức thanh toán</label>
-                        <select name="payment_method" id="payment_method" onchange="toggleBankInfo()">
-                            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
-                            <option value="bank_transfer">Chuyển khoản ngân hàng</option>
-                        </select>
-                    </div>
-                    <div id="bank_info" class="bank-info" style="display:none;">
-                        <p><strong>Ngân hàng:</strong> Vietcombank</p>
-                        <p><strong>Số tài khoản:</strong> 1234567890</p>
-                        <p><strong>Nội dung:</strong> Thanh toan don hang Itronic</p>
-                    </div>
-                    <button type="submit" name="place_order" class="btn-checkout">Hoàn tất đặt hàng</button>
-                </form>
+<nav class="navbar">
+    <div class="nav-content">
+        <a href="homepage.php" class="logo"><i class="fa-brands fa-apple"></i></a>
+        <ul class="nav-links">
+            <li><a href="homepage.php">Cửa hàng</a></li>
+            <li><a href="ipad.php">iPad</a></li>
+            <li><a href="iphone.php">iPhone</a></li>
+        </ul>
+        <div class="nav-icons" style="display:flex; align-items:center; gap:20px;">
+            <a href="cart.php"><i class="fa-solid fa-bag-shopping" style="font-size:22px;"></i></a>
+            <?php if(isset($_SESSION['user_name'])): ?>
+                <span>Hi, <?= htmlspecialchars($_SESSION['user_name']) ?></span>
             <?php endif; ?>
         </div>
+    </div>
+</nav>
 
-        <?php if(!$success): ?>
-        <div class="order-summary">
-            <h2>Tóm tắt đơn hàng</h2>
-            <?php if (isset($_SESSION['cart']) && is_array($_SESSION['cart'])): ?>
-                <?php foreach ($_SESSION['cart'] as $item): ?>
-                    <div style="display:flex; justify-content:space-between; margin:12px 0;">
-                        <span><?= htmlspecialchars($item['name'] ?? 'Sản phẩm') ?> × <?= $item['quantity'] ?></span>
-                        <span><?= number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 0, ',', '.') ?>đ</span>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            <hr>
-            <div style="display:flex; justify-content:space-between; font-size:20px; font-weight:600;">
-                <span>Tổng cộng</span>
-                <span style="color:#0071e3;"><?= number_format($total_price, 0, ',', '.') ?>đ</span>
-            </div>
-        </div>
+<main class="checkout-container">
+    <div>
+        <h1>Thông tin thanh toán</h1>
+
+        <?php if($error): ?>
+            <div class="alert" style="background:#ffebee; color:red;"><?= $error ?></div>
         <?php endif; ?>
-    </main>
 
-    <script>
-        function toggleBankInfo() {
-            const method = document.getElementById('payment_method').value;
-            document.getElementById('bank_info').style.display = (method === 'bank_transfer') ? 'block' : 'none';
-        }
-    </script>
+        <form method="POST">
+            <div class="form-group">
+                <label>Họ và tên <span style="color:red;">*</span></label>
+                <input type="text" name="fullname" required value="<?= htmlspecialchars($_POST['fullname'] ?? $user['fullname'] ?? '') ?>">
+            </div>
+            <div class="form-group">
+                <label>Số điện thoại <span style="color:red;">*</span></label>
+                <input type="tel" name="phone" required value="<?= htmlspecialchars($_POST['phone'] ?? $user['phone'] ?? '') ?>">
+            </div>
+
+            <!-- Địa chỉ -->
+            <div class="form-group">
+                <label>Địa chỉ giao hàng <span style="color:red;">*</span></label>
+                <select name="use_address" id="use_address" onchange="toggleAddressInput()" style="margin-bottom:10px;">
+                    <option value="default">Sử dụng địa chỉ mặc định từ tài khoản</option>
+                    <option value="new">Nhập địa chỉ giao hàng mới</option>
+                </select>
+                <input type="text" name="address" id="address_input" required 
+                       value="<?= htmlspecialchars($user['address'] ?? '') ?>"
+                       placeholder="Nhập địa chỉ mới nếu chọn tùy chỉnh">
+            </div>
+
+            <div class="form-group">
+                <label>Ghi chú đơn hàng</label>
+                <textarea name="note" rows="3"><?= htmlspecialchars($_POST['note'] ?? '') ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Phương thức thanh toán</label>
+                <select name="payment_method" id="payment_method" onchange="togglePaymentInfo()">
+                    <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+                    <option value="bank_transfer">Chuyển khoản ngân hàng</option>
+                    <option value="momo">Thanh toán qua ví MoMo</option>
+                </select>
+            </div>
+
+            <div id="bank_info" class="bank-info">
+                <p><strong>Ngân hàng:</strong> Vietcombank</p>
+                <p><strong>Số tài khoản:</strong> 1234567890</p>
+                <p><strong>Chủ tài khoản:</strong> CÔNG TY ITRONIC</p>
+                <p><strong>Nội dung:</strong> Thanh toán đơn hàng #<span id="order_preview">......</span></p>
+            </div>
+
+            <div id="momo_info" class="bank-info" style="text-align: center;">
+                <p><strong>Quét mã MoMo để thanh toán</strong></p>
+                <img src="../../hinhanh/momo.jpg" alt="Mã QR MoMo" style="max-width: 250px; margin-top: 10px; border-radius: 8px;">
+                <p style="font-size: 13px; color: #666; margin-top: 5px;">Vui lòng nhập nội dung là Số điện thoại của bạn</p>
+            </div>
+
+            <button type="submit" name="place_order" class="btn-checkout">Hoàn tất đặt hàng</button>
+        </form>
+    </div>
+
+    <!-- Tóm tắt đơn hàng -->
+    <div class="order-summary">
+        <h2>Tóm tắt đơn hàng</h2>
+        <?php foreach ($_SESSION['cart'] ?? [] as $item): ?>
+            <div style="display:flex; justify-content:space-between; margin:10px 0;">
+                <span><?= htmlspecialchars($item['name']) ?> × <?= $item['quantity'] ?></span>
+                <span><?= number_format($item['price'] * $item['quantity'], 0, ',', '.') ?>đ</span>
+            </div>
+        <?php endforeach; ?>
+        <hr>
+        <div style="font-size:20px; font-weight:600; display:flex; justify-content:space-between;">
+            <span>Tổng cộng</span>
+            <span style="color:#0071e3;"><?= number_format($total_price, 0, ',', '.') ?>đ</span>
+        </div>
+    </div>
+</main>
+
+<script>
+function toggleAddressInput() {
+    const select = document.getElementById('use_address');
+    const input = document.getElementById('address_input');
+    if (select.value === 'new') {
+        input.value = '';
+        input.focus();
+    } else {
+        input.value = "<?= addslashes($user['address'] ?? '') ?>";
+    }
+}
+
+function togglePaymentInfo() {
+    const method = document.getElementById('payment_method').value;
+    const bankInfo = document.getElementById('bank_info');
+    const momoInfo = document.getElementById('momo_info');
+
+    // Ẩn tất cả trước
+    bankInfo.style.display = 'none';
+    momoInfo.style.display = 'none';
+
+    // Hiển thị cái tương ứng
+    if (method === 'bank_transfer') {
+        bankInfo.style.display = 'block';
+    } else if (method === 'momo') {
+        momoInfo.style.display = 'block';
+    }
+}
+
+// Khởi tạo
+document.addEventListener('DOMContentLoaded', () => {
+    toggleAddressInput();
+    togglePaymentInfo();
+});
+</script>
 </body>
 </html>

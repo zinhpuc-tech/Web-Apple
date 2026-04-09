@@ -5,6 +5,7 @@ if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
 include "../../PHP/db_connect.php";
+include '../../PHP/cart_functions.php';
 // Helper: chuẩn hóa đường dẫn ảnh trước khi render
 
 // LOAD GIỎ HÀNG MỚI

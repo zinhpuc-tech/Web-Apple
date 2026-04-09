@@ -1,11 +1,15 @@
 <?php
 session_start();
-// Nếu session mất nhưng cookie còn, thì nạp lại ngay
+
+// Load giỏ hàng từ cookie nếu session mất
 if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
+
 include "../../PHP/db_connect.php";
-// LOAD GIỎ HÀNG MỚI
+include "../../PHP/cart_functions.php";
+
+// LOAD GIỎ HÀNG
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
@@ -16,6 +20,7 @@ if (isset($_SESSION['user_id'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
 }
 
+// ====================== PHÂN TRANG & LỌC IPHONE ======================
 $per_page = 6;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $per_page;
@@ -23,9 +28,14 @@ $offset = ($page - 1) * $per_page;
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
 
 $where = "WHERE category = 'iphone'";
-if ($filter === 'promax') $where .= " AND name LIKE '%Pro Max%'";
-if ($filter === 'pro') $where .= " AND name LIKE '%Pro%' AND name NOT LIKE '%Pro Max%'";
-if ($filter === 'normal') $where .= " AND name NOT LIKE '%Pro%'";
+
+if ($filter === 'promax') {
+    $where .= " AND name LIKE '%Pro Max%'";
+} elseif ($filter === 'pro') {
+    $where .= " AND name LIKE '%Pro%' AND name NOT LIKE '%Pro Max%'";
+} elseif ($filter === 'normal') {
+    $where .= " AND name NOT LIKE '%Pro%'";
+}
 
 $sql = "SELECT * FROM products $where ORDER BY id DESC LIMIT $per_page OFFSET $offset";
 $result = $conn->query($sql);
@@ -33,15 +43,14 @@ $result = $conn->query($sql);
 $total_sql = "SELECT COUNT(*) as total FROM products $where";
 $total = $conn->query($total_sql)->fetch_assoc()['total'] ?? 0;
 $total_pages = ceil($total / $per_page);
-// Check đường dẫn hình ảnh
+
+// Hàm resolve ảnh (chuẩn)
 function resolveImageSrc($url) {
     $url = trim($url ?? '');
     if ($url === '') return 'https://via.placeholder.com/600';
-
     if (preg_match('#^https?://#i', $url)) return $url;
     if (strpos($url, '/') === 0) return $url;
     if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
-
     return '../../' . ltrim($url, './');
 }
 ?>
