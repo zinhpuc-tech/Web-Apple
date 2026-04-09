@@ -111,11 +111,12 @@ function resolveImageSrc($url) {
             </ul>
 
             <!-- Thanh tìm kiếm -->
-            <form action="search.php" method="GET" class="main-search" style="margin:0 20px; position:relative; width:340px;">
+            <!-- Thanh tìm kiếm nâng cao -->
+            <form action="search.php" method="GET" style="margin:0 20px; position:relative; width:340px;">
                 <button type="submit" style="position:absolute; left:18px; top:50%; transform:translateY(-50%); background:none; border:none; color:#86868b;">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </button>
-                <input type="text" name="q" placeholder="Tìm kiếm iPhone, iPad..."
+                <input type="text" name="q" placeholder="Tìm kiếm iPhone, iPad..." 
                     style="padding:12px 20px 12px 50px; width:100%; border-radius:30px; border:1px solid #ddd;">
             </form>
 

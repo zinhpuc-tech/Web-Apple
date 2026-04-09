@@ -1,68 +1,86 @@
 <?php
 session_start();
-// Thêm đoạn này ngay sau session_start(); ở homepage.php, iphone.php...
 if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true);
 }
 include "../../PHP/db_connect.php";
-// LOAD GIỎ HÀNG MỚI
+
+// LOAD GIỎ HÀNG
 if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
-
 if (isset($_SESSION['user_id'])) {
     $_SESSION['cart'] = loadCartFromDB($conn, $_SESSION['user_id']);
 } else if (empty($_SESSION['cart']) && isset($_COOKIE['itronic_cart_backup'])) {
     $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
 }
 
-$keyword = isset($_GET['q']) ? trim($_GET['q']) : '';
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
-$per_page = 6;
-$offset = ($page - 1) * $per_page;
+// === THAM SỐ TÌM KIẾM NÂNG CAO ===
+$keyword    = isset($_GET['q']) ? trim($_GET['q']) : '';
+$category   = isset($_GET['category']) ? $_GET['category'] : 'all';
+$min_price  = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? (int)$_GET['min_price'] : 0;
+$max_price  = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? (int)$_GET['max_price'] : 0;
+$page       = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$per_page   = 6;
+$offset     = ($page - 1) * $per_page;
 
-$results = null;
-$total = 0;
-$total_pages = 1;
+// Xây dựng điều kiện WHERE
+$where = [];
+$params = [];
+$types = "";
 
 if (!empty($keyword)) {
+    $where[] = "(name LIKE ? OR technical_info LIKE ?)";
     $like = "%$keyword%";
-    $sub_where = "";
-
-    if ($filter === 'promax') $sub_where = " AND name LIKE '%Pro Max%'";
-    elseif ($filter === 'pro') $sub_where = " AND name LIKE '%Pro%' AND name NOT LIKE '%Pro Max%'";
-    elseif ($filter === 'normal' || $filter === 'standard') $sub_where = " AND name NOT LIKE '%Pro%'";
-    elseif ($filter === 'air') $sub_where = " AND name LIKE '%Air%'";
-    elseif ($filter === 'mini') $sub_where = " AND name LIKE '%mini%'";
-
-    // Đếm tổng
-    $count_sql = "SELECT COUNT(*) as total FROM products WHERE (name LIKE ? OR technical_info LIKE ?) $sub_where";
-    $stmt = $conn->prepare($count_sql);
-    $stmt->bind_param("ss", $like, $like);
-    $stmt->execute();
-    $total = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
-    $total_pages = ceil($total / $per_page);
-
-    // Lấy dữ liệu
-    $sql = "SELECT * FROM products WHERE (name LIKE ? OR technical_info LIKE ?) $sub_where 
-            ORDER BY id DESC LIMIT ? OFFSET ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("ssii", $like, $like, $per_page, $offset);
-    $stmt->execute();
-    $results = $stmt->get_result();
+    $params[] = $like;
+    $params[] = $like;
+    $types .= "ss";
 }
-// check đường dẫn
+
+if ($category !== 'all') {
+    $where[] = "category = ?";
+    $params[] = $category;
+    $types .= "s";
+}
+
+if ($min_price > 0) {
+    $where[] = "price >= ?";
+    $params[] = $min_price;
+    $types .= "i";
+}
+
+if ($max_price > 0) {
+    $where[] = "price <= ?";
+    $params[] = $max_price;
+    $types .= "i";
+}
+
+$where_clause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
+// Đếm tổng số sản phẩm
+$count_sql = "SELECT COUNT(*) as total FROM products $where_clause";
+$stmt = $conn->prepare($count_sql);
+if (!empty($params)) $stmt->bind_param($types, ...$params);
+$stmt->execute();
+$total = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+$total_pages = ceil($total / $per_page);
+
+// Lấy dữ liệu
+$sql = "SELECT * FROM products $where_clause ORDER BY id DESC LIMIT ? OFFSET ?";
+$stmt = $conn->prepare($sql);
+$types_pag = $types . "ii";
+$params_pag = array_merge($params, [$per_page, $offset]);
+if (!empty($params_pag)) $stmt->bind_param($types_pag, ...$params_pag);
+$stmt->execute();
+$results = $stmt->get_result();
+
+// Hàm resolve ảnh
 function resolveImageSrc($url) {
     $url = trim($url ?? '');
     if ($url === '') return 'https://via.placeholder.com/400x280/F5F5F7/666?text=No%20Image';
-    // nếu là URL đầy đủ
     if (preg_match('#^https?://#i', $url)) return $url;
-    // nếu bắt đầu bằng / (từ gốc web) giữ nguyên
     if (strpos($url, '/') === 0) return $url;
-    // nếu là đường dẫn tương đối đã có ./ hoặc ../ giữ nguyên
     if (strpos($url, './') === 0 || strpos($url, '../') === 0) return $url;
-    // mặc định, thêm ../../ để trở về root từ HTML/User
     return '../../' . ltrim($url, './');
 }
 ?>
@@ -102,46 +120,23 @@ function resolveImageSrc($url) {
             object-fit: contain;
             background: #f8f8f8;
         }
-        .filter-bar {
-            text-align: center;
-            margin: 30px 0;
+        .advanced-filter {
+            background: #f8f8f8;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 30px;
         }
-        .filter-bar a {
-            margin: 0 8px;
-            padding: 10px 20px;
-            border-radius: 25px;
-            text-decoration: none;
-            color: #333;
-        }
-        .filter-bar a.active {
-            background: #0071e3;
-            color: white;
-        }
-        .pagination {
-            text-align: center;
-            margin: 50px 0 40px;
-        }
-        .pagination a {
+        .pagination a, .pagination span {
             display: inline-block;
             padding: 12px 24px;
             margin: 0 8px;
-            background: linear-gradient(135deg, #0071e3, #005bb5);
-            color: white;
-            text-decoration: none;
             border-radius: 25px;
-            box-shadow: 0 4px 8px rgba(0,113,227,0.3);
-            transition: all 0.3s;
-            font-weight: 500;
-        }
-        .pagination a:hover {
-            background: linear-gradient(135deg, #005bb5, #004080);
-            transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
 
-        <nav class="navbar">
+    <nav class="navbar">
         <div class="nav-content">
             <a href="homepage.php" class="logo"><i class="fa-brands fa-apple"></i></a>
             <ul class="nav-links">
@@ -150,11 +145,12 @@ function resolveImageSrc($url) {
                 <li><a href="iphone.php">iPhone</a></li>
             </ul>
 
+            <!-- Form tìm kiếm đơn giản ở navbar -->
             <form action="search.php" method="GET" style="margin:0 20px; position:relative; width:350px;">
                 <button type="submit" style="position:absolute; left:18px; top:50%; transform:translateY(-50%); background:none; border:none; color:#86868b;">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </button>
-                <input type="text" name="q" value="<?= htmlspecialchars($keyword ?? '') ?>" 
+                <input type="text" name="q" value="<?= htmlspecialchars($keyword) ?>" 
                        placeholder="Tìm kiếm iPhone, iPad..." 
                        style="padding:12px 20px 12px 50px; width:100%; border-radius:30px; border:1px solid #ddd;">
             </form>
@@ -197,20 +193,47 @@ function resolveImageSrc($url) {
 
     <main class="store-container">
         <h1 style="text-align:center; margin:40px 0 20px;">
-            <?= !empty($keyword) ? 'Kết quả tìm kiếm cho: "<strong>' . htmlspecialchars($keyword) . '</strong>"' : 'Tìm kiếm sản phẩm' ?>
+            <?= !empty($keyword) ? 'Kết quả tìm kiếm cho: "<strong>' . htmlspecialchars($keyword) . '</strong>"' : 'Tìm kiếm nâng cao' ?>
         </h1>
 
-        <?php if(!empty($keyword)): ?>
-        <div class="filter-bar">
-            <a href="search.php?q=<?= urlencode($keyword) ?>&filter=all" class="<?= $filter=='all'?'active':'' ?>">Tất cả</a>
-            <a href="search.php?q=<?= urlencode($keyword) ?>&filter=promax" class="<?= $filter=='promax'?'active':'' ?>">Pro Max</a>
-            <a href="search.php?q=<?= urlencode($keyword) ?>&filter=pro" class="<?= $filter=='pro'?'active':'' ?>">Pro</a>
-            <a href="search.php?q=<?= urlencode($keyword) ?>&filter=normal" class="<?= $filter=='normal' || $filter=='standard'?'active':'' ?>">Thường</a>
+        <!-- === FORM TÌM KIẾM NÂNG CAO === -->
+        <div class="advanced-filter">
+            <form action="search.php" method="GET">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr; gap: 15px; align-items: end;">
+                    <div>
+                        <label>Từ khóa</label><br>
+                        <input type="text" name="q" value="<?= htmlspecialchars($keyword) ?>" 
+                               placeholder="Nhập tên sản phẩm..." style="width:100%; padding:10px; border-radius:8px;">
+                    </div>
+                    <div>
+                        <label>Phân loại</label><br>
+                        <select name="category" style="width:100%; padding:10px; border-radius:8px;">
+                            <option value="all" <?= $category=='all'?'selected':'' ?>>Tất cả</option>
+                            <option value="iphone" <?= $category=='iphone'?'selected':'' ?>>iPhone</option>
+                            <option value="ipad" <?= $category=='ipad'?'selected':'' ?>>iPad</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Giá từ</label><br>
+                        <input type="number" name="min_price" value="<?= $min_price ?: '' ?>" 
+                               placeholder="0" style="width:100%; padding:10px; border-radius:8px;">
+                    </div>
+                    <div>
+                        <label>Giá đến</label><br>
+                        <input type="number" name="max_price" value="<?= $max_price ?: '' ?>" 
+                               placeholder="999999999" style="width:100%; padding:10px; border-radius:8px;">
+                    </div>
+                    <div>
+                        <button type="submit" style="width:100%; padding:10px; background:#0071e3; color:white; border:none; border-radius:8px; font-weight:600;">
+                            <i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
-        <?php endif; ?>
 
         <div class="product-grid">
-            <?php if(!empty($keyword) && $results && $results->num_rows > 0): ?>
+            <?php if ($results && $results->num_rows > 0): ?>
                 <?php while($row = $results->fetch_assoc()): ?>
                     <div class="product-card" onclick="window.location.href='product_detail.php?id=<?= $row['id'] ?>'">
                         <img src="<?= htmlspecialchars(resolveImageSrc($row['image_url'])) ?>" 
@@ -225,23 +248,24 @@ function resolveImageSrc($url) {
                         </div>
                     </div>
                 <?php endwhile; ?>
-            <?php elseif(!empty($keyword)): ?>
-                <p style="grid-column: 1/-1; text-align:center; color:#86868b; padding:60px 20px;">
-                    Không tìm thấy sản phẩm nào phù hợp với "<strong><?= htmlspecialchars($keyword) ?></strong>"
+            <?php else: ?>
+                <p style="grid-column: 1/-1; text-align:center; color:#86868b; padding:80px 20px;">
+                    Không tìm thấy sản phẩm nào phù hợp với tiêu chí tìm kiếm.
                 </p>
             <?php endif; ?>
         </div>
 
-        <?php if(!empty($keyword) && $total_pages > 1): ?>
-        <div class="pagination">
+        <!-- Phân trang -->
+        <?php if($total_pages > 1): ?>
+        <div class="pagination" style="text-align:center; margin:50px 0;">
             <?php if($page > 1): ?>
-                <a href="search.php?q=<?= urlencode($keyword) ?>&page=<?= $page-1 ?>&filter=<?= $filter ?>">← Trang trước</a>
+                <a href="search.php?q=<?= urlencode($keyword) ?>&category=<?= $category ?>&min_price=<?= $min_price ?>&max_price=<?= $max_price ?>&page=<?= $page-1 ?>">← Trang trước</a>
             <?php endif; ?>
             
-            <span>Trang <?= $page ?> / <?= $total_pages ?></span>
+            <span style="background:#f8f8f8; padding:12px 20px; border-radius:25px;">Trang <?= $page ?> / <?= $total_pages ?></span>
             
             <?php if($page < $total_pages): ?>
-                <a href="search.php?q=<?= urlencode($keyword) ?>&page=<?= $page+1 ?>&filter=<?= $filter ?>">Trang sau →</a>
+                <a href="search.php?q=<?= urlencode($keyword) ?>&category=<?= $category ?>&min_price=<?= $min_price ?>&max_price=<?= $max_price ?>&page=<?= $page+1 ?>">Trang sau →</a>
             <?php endif; ?>
         </div>
         <?php endif; ?>
