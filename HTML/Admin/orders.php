@@ -15,6 +15,15 @@ if (isset($_POST['update_status'])) {
     
     $update_sql = "UPDATE orders SET status = '$new_status' WHERE id = $order_id";
     
+    // Nếu là hủy → lưu thông báo cho user
+    if ($new_status == 'cancelled') {
+        $conn->query("
+            INSERT INTO notifications (user_id, message)
+            SELECT user_id, 'Đơn hàng của bạn đã bị hủy!'
+            FROM orders WHERE id = $order_id
+        ");
+    }
+    
     if ($conn->query($update_sql)) {
         // Refresh trang để cập nhật giao diện mới nhất
         header("Location: orders.php");
@@ -26,6 +35,7 @@ if (isset($_POST['update_status'])) {
 $sql = "SELECT o.*, u.fullname, u.email 
         FROM orders o 
         JOIN users u ON o.user_id = u.id 
+        WHERE o.status != 'cancelled'
         ORDER BY o.created_at DESC";
 
 $orders = $conn->query($sql);
@@ -99,6 +109,11 @@ $orders = $conn->query($sql);
             border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; transition: 0.2s;
         }
         .btn-save:hover { background: var(--apple-blue); }
+        /* cancelled */
+        .cancelled {
+            background: #ffe5e5;
+            color: #ff3b30;
+        }
     </style>
 </head>
 <body>
@@ -171,6 +186,7 @@ $orders = $conn->query($sql);
             <option value="pending" <?= $row['status'] == 'pending' ? 'selected' : '' ?>>Chờ duyệt</option>
             <option value="processing" <?= $row['status'] == 'processing' ? 'selected' : '' ?>>Đang giao</option>
             <option value="completed" <?= $row['status'] == 'completed' ? 'selected' : '' ?>>HOÀN TẤT</option>
+            <option value="cancelled" <?= $row['status'] == 'cancelled' ? 'selected' : '' ?>>Hủy đơn hàng</option>
         </select>
         <button type="submit" name="btn_save" class="btn-save">Lưu</button>
     </form>

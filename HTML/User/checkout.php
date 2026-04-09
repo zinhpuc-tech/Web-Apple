@@ -72,10 +72,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 }
             }
 
-            // Hoàn tất
             $conn->commit();
             $success = "Đặt hàng thành công! Mã đơn hàng: #" . str_pad($order_id, 6, '0', STR_PAD_LEFT);
-            unset($_SESSION['cart']); // Xóa giỏ sau khi đặt thành công
+
+            // ===== FIX GIỎ HÀNG =====
+            $_SESSION['cart'] = [];
+
+            // Xóa DB cart nếu có
+            if (isset($_SESSION['user_id'])) {
+                $uid = $_SESSION['user_id'];
+                $conn->query("DELETE FROM user_carts WHERE user_id = $uid");
+            }
+
+            // Xóa cookie
+            setcookie('itronic_cart_backup', "", time() - 3600, "/");
+
+            // ========================
+
+            header("Location: my_order.php");
+            exit();
             
         } catch (Exception $e) {
             $conn->rollback();

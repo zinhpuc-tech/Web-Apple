@@ -37,6 +37,33 @@ function resolveImageSrc($url) {
     // mặc định, thêm ../../ để trở về root từ HTML/User
     return '../../' . ltrim($url, './');
 }
+// Hiển thị số đơn hàng đã đặt
+$order_count = 0;
+
+if (isset($_SESSION['user_id'])) {
+    $uid = $_SESSION['user_id'];
+    $sql_count = "SELECT COUNT(*) as total 
+                  FROM orders 
+                  WHERE user_id = $uid 
+                  AND status IN ('pending','processing')";
+    $res = $conn->query($sql_count);
+    if ($res) {
+        $order_count = $res->fetch_assoc()['total'];
+    }
+}
+// thêm hàm check lại giỏ hàng
+function loadCart() {
+    global $conn;
+    if (isset($_SESSION['user_id'])) {
+        $cart = loadCartFromDB($conn, $_SESSION['user_id']);
+        $_SESSION['cart'] = $cart ?: [];
+    } else if (isset($_COOKIE['itronic_cart_backup'])) {
+        $_SESSION['cart'] = json_decode($_COOKIE['itronic_cart_backup'], true) ?? [];
+    }
+    if (!isset($_SESSION['cart'])) $_SESSION['cart'] = [];
+}
+
+loadCart();
 ?>
 
 <!DOCTYPE html>
@@ -128,6 +155,11 @@ function resolveImageSrc($url) {
                             <?= array_sum(array_column($_SESSION['cart'], 'quantity')) ?>
                         </span>
                     <?php endif; ?>
+                </a>
+
+                <!-- Đơn hàng -->
+                 <a href="my_order.php" title="Đơn hàng của tôi" style="color: inherit; text-decoration: none;">
+                    <i class="fa-solid fa-box"></i>
                 </a>
 
                 <?php if (isset($_SESSION['user_name'])): ?>
