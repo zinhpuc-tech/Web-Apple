@@ -197,10 +197,7 @@ if (isset($_POST['add_product'])) {
 
                     <label>Giá nhập</label>
                     <input type="number" name="cost_price">
-
-                    <label>Giá bán</label>
-                    <input type="number" name="price">
-
+                    
                     <label>Số lượng</label>
                     <input type="number" name="quantity">
 
