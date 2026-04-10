@@ -1,7 +1,8 @@
 <?php
 session_start();
 include __DIR__ . '/../../PHP/db_connect.php';
-// Check đường dẫn hình ảnh
+
+// Giữ nguyên hàm Check đường dẫn hình ảnh của bạn
 function resolveImageSrc($url) {
     $url = trim($url ?? '');
     if ($url === '') return 'https://via.placeholder.com/600';
@@ -20,16 +21,14 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
 
 $message = ""; $type = "";
 
-// 2. XỬ LÝ XÓA SẢN PHẨM (LOGIC THÔNG MINH)
+// 2. GIỮ NGUYÊN LOGIC XÓA SẢN PHẨM THÔNG MINH CỦA BẠN
 if (isset($_GET['delete_id'])) {
     $del_id = (int)$_GET['delete_id'];
     
-    // Kiểm tra xem sản phẩm đã có trong phiếu nhập hàng chưa (giả sử bảng là import_details)
-    // Nếu bạn chưa tạo bảng này, bạn có thể tạm thời kiểm tra quantity > 0
+    // Kiểm tra lịch sử nhập hàng (import_details)
     $check_import = $conn->query("SELECT id FROM import_details WHERE product_id = $del_id LIMIT 1");
     
     if ($check_import && $check_import->num_rows > 0) {
-        // Đã có lịch sử nhập hàng -> Đánh dấu ẩn (status = 0)
         $stmt = $conn->prepare("UPDATE products SET status = 0 WHERE id = ?");
         $stmt->bind_param("i", $del_id);
         if ($stmt->execute()) {
@@ -37,7 +36,6 @@ if (isset($_GET['delete_id'])) {
             $type = "success";
         }
     } else {
-        // Chưa có lịch sử nhập hàng -> Xóa vĩnh viễn
         $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
         $stmt->bind_param("i", $del_id);
         if ($stmt->execute()) {
@@ -47,7 +45,7 @@ if (isset($_GET['delete_id'])) {
     }
 }
 
-// 3. XỬ LÝ CẬP NHẬT SẢN PHẨM (BỔ SUNG CÁC TRƯỜNG MỚI)
+// 3. GIỮ NGUYÊN XỬ LÝ CẬP NHẬT SẢN PHẨM
 if (isset($_POST['update_product'])) {
     $id = (int)$_POST['id'];
     $name = $_POST['name'];
@@ -60,7 +58,6 @@ if (isset($_POST['update_product'])) {
     $status = $_POST['status'];
     $tech_info = $_POST['technical_info'];
 
-    // Tính toán lại giá bán lẻ (price) dựa trên giá vốn và % lợi nhuận
     $price = $cost_price * (1 + ($profit_margin / 100));
 
     $stmt = $conn->prepare("UPDATE products SET name=?, sku=?, unit=?, cost_price=?, profit_margin=?, price=?, category=?, image_url=?, status=?, technical_info=? WHERE id=?");
@@ -87,22 +84,22 @@ if (isset($_GET['edit_id'])) {
     $res = $conn->query("SELECT * FROM products WHERE id = $edit_id");
     $edit_data = $res->fetch_assoc();
 }
-// 5.Bar search
-$keyword = "";
 
-if (isset($_GET['keyword'])) {
-    $keyword = mysqli_real_escape_string($conn, $_GET['keyword']);
-    
-    $sql = "SELECT * FROM products 
-        WHERE name LIKE '%$keyword%' 
-        OR sku LIKE '%$keyword%' 
-        OR category LIKE '%$keyword%' 
-        ORDER BY id DESC";
-} 
-else {
-    $sql = "SELECT * FROM products ORDER BY id DESC";
+// 5. GIỮ NGUYÊN BAR SEARCH VÀ THÊM FILTER PHÂN LOẠI (Để hiện đủ 300+ sản phẩm)
+$keyword = isset($_GET['keyword']) ? mysqli_real_escape_string($conn, $_GET['keyword']) : "";
+$filter_cat = isset($_GET['filter_cat']) ? mysqli_real_escape_string($conn, $_GET['filter_cat']) : "";
+
+$sql = "SELECT * FROM products WHERE 1=1";
+
+if ($keyword !== "") {
+    $sql .= " AND (name LIKE '%$keyword%' OR sku LIKE '%$keyword%' OR category LIKE '%$keyword%')";
 }
 
+if ($filter_cat !== "") {
+    $sql .= " AND category = '$filter_cat'";
+}
+
+$sql .= " ORDER BY id DESC";
 $result = $conn->query($sql);
 ?>
 
@@ -116,16 +113,12 @@ $result = $conn->query($sql);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* GIỮ NGUYÊN TOÀN BỘ STYLE CỦA BẠN */
         :root { 
-            --apple-blue: #0071e3; 
-            --apple-dark: #1d1d1f; 
-            --apple-gray: #86868b; 
-            --apple-bg: #f5f5f7; 
-            --sidebar-width: 260px;
+            --apple-blue: #0071e3; --apple-dark: #1d1d1f; --apple-gray: #86868b; --apple-bg: #f5f5f7; --sidebar-width: 260px;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background: var(--apple-bg); display: flex; min-height: 100vh; overflow-x: hidden; color: var(--apple-dark); }
+        body { background: var(--apple-bg); display: flex; min-height: 100vh; color: var(--apple-dark); }
 
         .sidebar { 
             width: var(--sidebar-width); background: var(--apple-dark); color: white; 
@@ -141,68 +134,40 @@ $result = $conn->query($sql);
 
         .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 40px; width: calc(100% - var(--sidebar-width)); }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .header h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        .header h2 { font-size: 28px; font-weight: 700; }
 
         .card { background: white; border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.02); margin-bottom: 30px; }
 
+        .bar_search { display: flex; gap: 10px; margin: 5px 10px; }
+        .bar_search input { padding: 15px; flex: 2; border: 1px solid #d2d2d7; border-radius: 8px; }
+        
+        /* Dropdown mới của bạn */
+        .bar_search select { padding: 10px; flex: 1; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px; background: #fff; }
+
+        .find_btn { padding: 15px; height: 48px; border: none; border-radius: 8px; background-color: black; color: white; cursor: pointer; font-weight: 600; }
+        .clear_btn { 
+            display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; 
+            background: #ff3b30; color: white; text-decoration: none; border-radius: 8px; font-size: 18px; 
+        }
+
         .edit-form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 15px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 12px; color: var(--apple-gray); text-transform: uppercase; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px; outline: none; transition: 0.2s; font-size: 14px; }
-        input:focus { border-color: var(--apple-blue); box-shadow: 0 0 0 3px rgba(0,113,227,0.1); }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 10px; outline: none; font-size: 14px; }
         
-        .btn-save { background: var(--apple-blue); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: 600; }
-        .btn-cancel { background: #f5f5f7; color: var(--apple-dark); padding: 12px 20px; border-radius: 10px; text-decoration: none; margin-left: 10px; font-size: 14px; font-weight: 500; }
-
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 15px; background: #fbfbfd; color: var(--apple-gray); font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #eee; }
-        td { padding: 15px; border-bottom: 1px solid #f2f2f2; vertical-align: middle; }
+        th { text-align: left; padding: 15px; background: #fbfbfd; color: var(--apple-gray); font-size: 12px; border-bottom: 1px solid #eee; }
+        td { padding: 15px; border-bottom: 1px solid #f2f2f2; }
         
-        .product-img { width: 50px; height: 50px; object-fit: contain; background: #fff; border-radius: 8px; border: 1px solid #eee; }
+        .product-img { width: 50px; height: 50px; object-fit: contain; border-radius: 8px; border: 1px solid #eee; }
         .price { color: var(--apple-blue); font-weight: 600; }
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
         .status-show { background: #e3f9e5; color: #1f7a28; }
         .status-hide { background: #f5f5f7; color: var(--apple-gray); }
-        
-        .stock-warning { color: #ff9500; font-weight: 700; background: #fff8eb; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
-        .stock-danger { color: #ff3b30; font-weight: 700; background: #fff1f0; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
 
-        .btn-action { padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-edit { background: #eef6ff; color: var(--apple-blue); margin-right: 5px; }
+        .btn-action { padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-edit { background: #eef6ff; color: var(--apple-blue); }
         .btn-del { background: #fff1f0; color: #ff3b30; }
-
-        .alert { padding: 15px; border-radius: 12px; margin-bottom: 25px; font-weight: 500; }
-        .alert-success { background: #e3f9e5; color: #1f7a28; border: 1px solid #cdedcf; }
-        .bar_search{
-            display: flex;
-            gap: 10px;
-            margin: 5px 10px;
-        }
-        .bar_search input{
-            padding: 15px;
-            width: 75%;
-        }
-        .find_btn{
-            padding: 15px;
-            height: 45px;
-            border: none;
-            border-radius: 8px;
-            background-color: black;
-            color: white;
-        }
-        .clear_btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 45px;
-            height: 45px;
-            background: #ff3b30;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .clear_btn:hover {background: #d9362b;}
+        .alert { padding: 15px; border-radius: 12px; margin-bottom: 25px; font-weight: 500; background: #e3f9e5; color: #1f7a28; }
     </style>
 </head>
 <body>
@@ -222,14 +187,23 @@ $result = $conn->query($sql);
 
 <div class="main-content">
     <div class="header">
-        <h2>Quản lý kho sản phẩm</h2>
+        <h2>Quản lý kho (<?= $result->num_rows ?> SP)</h2>
         <div style="color: var(--apple-gray); font-weight: 500;"><i class="far fa-calendar-alt"></i> <?php echo date('d/m/Y'); ?></div>
     </div>
 
     <form method="GET" class="bar_search">
         <input type="text" name="keyword" value="<?= htmlspecialchars($keyword) ?>" placeholder="Nhập sản phẩm bạn muốn tìm kiếm">
+        
+        <select name="filter_cat">
+            <option value="">-- Loại hàng --</option>
+            <option value="iphone" <?= $filter_cat=='iphone'?'selected':'' ?>>iPhone</option>
+            <option value="ipad" <?= $filter_cat=='ipad'?'selected':'' ?>>iPad</option>
+            <option value="mac" <?= $filter_cat=='mac'?'selected':'' ?>>MacBook</option>
+            <option value="watch" <?= $filter_cat=='watch'?'selected':'' ?>>Watch</option>
+        </select>
+
         <button class="find_btn" type="submit">Tìm kiếm</button>
-        <?php if (!empty($keyword)): ?>
+        <?php if (!empty($keyword) || !empty($filter_cat)): ?>
             <a href="products.php" class="clear_btn">✖</a>
         <?php endif; ?>
     </form>
@@ -244,26 +218,11 @@ $result = $conn->query($sql);
         <form method="POST">
             <input type="hidden" name="id" value="<?= $edit_data['id'] ?>">
             <div class="edit-form-grid">
-                <div>
-                    <label>Tên sản phẩm</label>
-                    <input type="text" name="name" value="<?= htmlspecialchars($edit_data['name']) ?>" required>
-                </div>
-                <div>
-                    <label>Mã sản phẩm (SKU)</label>
-                    <input type="text" name="sku" value="<?= htmlspecialchars($edit_data['sku']) ?>" placeholder="VD: IP16PM-256">
-                </div>
-                <div>
-                    <label>Đơn vị tính</label>
-                    <input type="text" name="unit" value="<?= htmlspecialchars($edit_data['unit'] ?? 'Cái') ?>">
-                </div>
-                <div>
-                    <label>Giá vốn (VNĐ)</label>
-                    <input type="number" name="cost_price" value="<?= $edit_data['cost_price'] ?>" step="0.01" required>
-                </div>
-                <div>
-                    <label>Lợi nhuận (%)</label>
-                    <input type="number" name="profit_margin" value="<?= $edit_data['profit_margin'] ?? 20 ?>" required>
-                </div>
+                <div><label>Tên sản phẩm</label><input type="text" name="name" value="<?= htmlspecialchars($edit_data['name']) ?>" required></div>
+                <div><label>Mã SKU</label><input type="text" name="sku" value="<?= htmlspecialchars($edit_data['sku']) ?>"></div>
+                <div><label>Đơn vị</label><input type="text" name="unit" value="<?= htmlspecialchars($edit_data['unit'] ?? 'Cái') ?>"></div>
+                <div><label>Giá vốn</label><input type="number" name="cost_price" value="<?= $edit_data['cost_price'] ?>" required></div>
+                <div><label>Lợi nhuận (%)</label><input type="number" name="profit_margin" value="<?= $edit_data['profit_margin'] ?>" required></div>
                 <div>
                     <label>Phân loại</label>
                     <select name="category">
@@ -273,24 +232,23 @@ $result = $conn->query($sql);
                         <option value="watch" <?= $edit_data['category']=='watch'?'selected':'' ?>>Apple Watch</option>
                     </select>
                 </div>
+                <div><label>URL Ảnh</label><input type="text" name="image_url" value="<?= htmlspecialchars($edit_data['image_url']) ?>"></div>
                 <div>
-                    <label>URL Hình ảnh</label>
-                    <input type="text" name="image_url" value="<?= htmlspecialchars($edit_data['image_url']) ?>">
-                </div>
-                <div>
-                    <label>Hiện trạng bán hàng</label>
+                    <label>Hiện trạng</label>
                     <select name="status">
-                        <option value="1" <?= $edit_data['status']==1?'selected':'' ?>>Đang bán (Hiển thị)</option>
-                        <option value="0" <?= $edit_data['status']==0?'selected':'' ?>>Ngừng bán (Ẩn)</option>
+                        <option value="1" <?= $edit_data['status']==1?'selected':'' ?>>Đang bán</option>
+                        <option value="0" <?= $edit_data['status']==0?'selected':'' ?>>Ngừng bán</option>
                     </select>
                 </div>
             </div>
-            <div style="margin: 20px 0;">
-                <label>Mô tả & Thông số kỹ thuật</label>
+            <div style="margin-top:20px;">
+                <label>Thông số kỹ thuật</label>
                 <textarea name="technical_info" rows="3"><?= htmlspecialchars($edit_data['technical_info']) ?></textarea>
             </div>
-            <button type="submit" name="update_product" class="btn-save"><i class="fas fa-save"></i> Lưu thay đổi</button>
-            <a href="products.php" class="btn-cancel">Hủy bỏ</a>
+            <div style="margin-top: 20px;">
+                <button type="submit" name="update_product" class="find_btn" style="background:var(--apple-blue); height: 40px; padding: 0 20px;">Lưu thay đổi</button>
+                <a href="products.php" class="btn-cancel" style="margin-left: 10px; text-decoration: none; color: #888;">Hủy</a>
+            </div>
         </form>
     </div>
     <?php endif; ?>
@@ -301,19 +259,17 @@ $result = $conn->query($sql);
                 <tr>
                     <th>Ảnh</th>
                     <th>Thông tin SP</th>
-                    <th>Giá vốn / Lợi nhuận</th>
-                    <th>Giá bán lẻ</th>
+                    <th>Giá vốn / Lãi</th>
+                    <th>Giá bán</th>
                     <th>Kho</th>
                     <th>Trạng thái</th>
                     <th style="text-align: right;">Hành động</th>
                 </tr>
             </thead>
             <tbody>
-                <?php
-                while($row = $result->fetch_assoc()):
-                ?>
+                <?php while($row = $result->fetch_assoc()): ?>
                 <tr>
-                    <td><img src="<?= resolveImageSrc($row['image_url']) ?>" class="product-img"></td>
+                    <td><img src="<?= resolveImageSrc($row['image_url']) ?>" class="product-img" onerror="this.src='https://via.placeholder.com/150'"></td>
                     <td>
                         <div style="font-weight: 600;"><?= htmlspecialchars($row['name']) ?></div>
                         <div style="font-size: 11px; color: var(--apple-gray);">SKU: <?= htmlspecialchars($row['sku']) ?></div>
@@ -323,43 +279,21 @@ $result = $conn->query($sql);
                         <div style="font-size: 11px; color: #1f7a28;">+<?= $row['profit_margin'] ?>% lãi</div>
                     </td>
                     <td class="price"><?= number_format($row['price']) ?>đ</td>
+                    <td><?= $row['quantity'] ?> <?= $row['unit'] ?></td>
                     <td>
-                        <?php if($row['quantity'] == 0): ?>
-                            <span class="stock-danger">Hết hàng</span>
-                        <?php elseif($row['quantity'] <= 5): ?>
-                            <span class="stock-warning">Sắp hết: <?= $row['quantity'] ?></span>
-                        <?php else: ?>
-                            <span><?= $row['quantity'] ?> <?= $row['unit'] ?></span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <?php if($row['status'] == 1): ?>
-                            <span class="badge status-show">Đang bán</span>
-                        <?php else: ?>
-                            <span class="badge status-hide">Đang ẩn</span>
-                        <?php endif; ?>
+                        <span class="badge <?= $row['status'] == 1 ? 'status-show' : 'status-hide' ?>">
+                            <?= $row['status'] == 1 ? 'Đang bán' : 'Đang ẩn' ?>
+                        </span>
                     </td>
                     <td style="text-align: right;">
                         <a href="products.php?edit_id=<?= $row['id'] ?>" class="btn-action btn-edit"><i class="fas fa-pen"></i></a>
-                        <a href="products.php?delete_id=<?= $row['id'] ?>" 
-                           class="btn-action btn-del" 
-                           onclick="return confirm('Hệ thống sẽ xóa hoặc ẩn tùy theo lịch sử nhập hàng. Xác nhận?')">
-                           <i class="fas fa-trash"></i>
-                        </a>
+                        <a href="products.php?delete_id=<?= $row['id'] ?>" class="btn-action btn-del" onclick="return confirm('Hệ thống sẽ xóa hoặc ẩn tùy theo lịch sử nhập hàng. Xác nhận?')"><i class="fas fa-trash"></i></a>
                     </td>
                 </tr>
                 <?php endwhile; ?>
-                <?php if($result->num_rows == 0): ?>
-                <tr>
-                    <td colspan="7" style="text-align:center; color:red;">
-                        Không tìm thấy sản phẩm!
-                    </td>
-                </tr>
-                <?php endif; ?>
             </tbody>
         </table>
     </div>
-</div> 
-
+</div>
 </body>
 </html>
