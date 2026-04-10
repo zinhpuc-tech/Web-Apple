@@ -1,31 +1,73 @@
 <?php
 session_start();
+// Bật báo lỗi để nếu có vấn đề gì nó sẽ hiện chữ chứ không trắng trang
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 include __DIR__ . '/../../PHP/db_connect.php';
 
+$message = "";
+$type = "";
+
+// 1. XỬ LÝ KHÓA/MỞ KHÓA
 if (isset($_GET['toggle_id'])) {
     $id = (int)$_GET['toggle_id'];
-    if ($id != $_SESSION['user_id']) {
+    if (isset($_SESSION['user_id']) && $id != $_SESSION['user_id']) {
         $conn->query("UPDATE users SET status = 1 - status WHERE id = $id");
+        header("Location: users.php");
+        exit();
     }
-    header("Location: users.php");
 }
 
+// 2. XỬ LÝ RESET MẬT KHẨU
 if (isset($_GET['reset_id'])) {
     $id = (int)$_GET['reset_id'];
     $pw = password_hash('123456', PASSWORD_DEFAULT);
     $conn->query("UPDATE users SET password = '$pw' WHERE id = $id");
     header("Location: users.php?msg=reset_ok");
+    exit();
 }
 
-$users = $conn->query("SELECT * FROM users ORDER BY role DESC");
+// 3. XỬ LÝ THÊM TÀI KHOẢN (Đã sửa tên cột theo database của bạn)
+if (isset($_POST['add_user'])) {
+    $fullname      = $conn->real_escape_string($_POST['fullname']);
+    $email         = $conn->real_escape_string($_POST['email']);
+    $phone         = $conn->real_escape_string($_POST['phone']);
+    $gender        = $conn->real_escape_string($_POST['gender']);
+    $date_of_birth = $conn->real_escape_string($_POST['date_of_birth']); // Khớp với ảnh
+    $address       = $conn->real_escape_string($_POST['address']);
+    $role          = $conn->real_escape_string($_POST['role']);
+    $password      = password_hash('123456', PASSWORD_DEFAULT);
+
+    $check = $conn->query("SELECT id FROM users WHERE email = '$email'");
+    if ($check && $check->num_rows > 0) {
+        $message = "Email này đã tồn tại!";
+        $type = "error";
+    } else {
+        // Câu lệnh INSERT khớp chính xác với ảnh database bạn gửi
+        $sql = "INSERT INTO users (fullname, email, phone, gender, date_of_birth, address, password, status, role) 
+                VALUES ('$fullname', '$email', '$phone', '$gender', '$date_of_birth', '$address', '$password', 1, '$role')";
+        
+        if($conn->query($sql)) {
+            $message = "Thêm thành công! Mật khẩu mặc định là 123456";
+            $type = "success";
+        } else {
+            $message = "Lỗi SQL: " . $conn->error;
+            $type = "error";
+        }
+    }
+}
+
+if (isset($_GET['msg']) && $_GET['msg'] == 'reset_ok') {
+    $message = "Mật khẩu đã được đưa về 123456";
+    $type = "success";
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="../../hinhanh/apple-icon.ico">
     <title>Itronic - Quản lý người dùng</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -33,41 +75,40 @@ $users = $conn->query("SELECT * FROM users ORDER BY role DESC");
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background: var(--apple-bg); display: flex; min-height: 100vh; }
 
-        /* SIDEBAR THỐNG NHẤT VỚI DASHBOARD */
+        /* SIDEBAR CỦA BẠN */
         .sidebar { width: 260px; background: var(--apple-dark); color: white; padding: 20px 0; position: sticky; top: 0; height: 100vh; }
         .logo-admin { text-align: center; padding: 20px; font-size: 22px; font-weight: bold; border-bottom: 1px solid #333; margin-bottom: 10px; }
         .menu a { display: flex; align-items: center; padding: 15px 25px; color: #ddd; text-decoration: none; transition: 0.3s; font-size: 14px; }
         .menu a i { margin-right: 12px; width: 20px; text-align: center; }
         .menu a:hover, .menu a.active { background: var(--apple-blue); color: white; }
 
-        /* MAIN CONTENT */
+        /* NỘI DUNG CHÍNH */
         .main-content { flex: 1; padding: 30px; }
-        .header { background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
         
-        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .card h3 { margin-bottom: 20px; font-weight: 600; color: var(--apple-dark); }
+        .reg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 12px; font-weight: 600; color: var(--apple-gray); text-transform: uppercase; }
+        .form-group input, .form-group select, .form-group textarea { padding: 10px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-size: 14px; }
+        .btn-add { background: var(--apple-blue); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 15px; }
 
-        /* TABLE STYLING */
         table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 15px; background: #fafafa; color: var(--apple-gray); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; }
-        td { padding: 15px; border-bottom: 1px solid #eee; font-size: 14px; color: #333; }
-        tr:hover { background-color: #f9f9fb; }
+        th { text-align: left; padding: 15px; color: var(--apple-gray); font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #eee; }
+        td { padding: 15px; border-bottom: 1px solid #eee; font-size: 14px; }
 
-        /* BADGES & BUTTONS */
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
         .status-active { background: #e8f5e9; color: var(--apple-green); }
-        .status-locked { background: #ffebee; color: var(--apple-red); }
+        .status-locked { background: #fff5f5; color: var(--apple-red); }
 
-        .btn { padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-lock { background: #fff1f0; color: var(--apple-red); border: 1px solid #ffa39e; }
-        .btn-unlock { background: #f6ffed; color: var(--apple-green); border: 1px solid #b7eb8f; }
-        .btn-delete { background: #f5f5f5; color: #555; border: 1px solid #d9d9d9; margin-left: 5px; }
-        .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        .btn-group { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-action { text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; border: 1px solid transparent; }
+        .btn-reset { color: var(--apple-blue); background: #eaf4ff; border-color: #c2e0ff; }
+        .btn-lock { color: var(--apple-red); background: #fff1f0; border-color: #ffccc7; }
+        .btn-unlock { color: var(--apple-green); background: #f6ffed; border-color: #b7eb8f; }
 
-        /* ALERT */
-        .alert { padding: 15px 25px; border-radius: 8px; margin-bottom: 25px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
-        .alert-success { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
-        .alert-error { background: #fff2f0; color: #cf1322; border: 1px solid #ffa39e; }
+        .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .alert-error { background: #fff5f5; color: #c62828; border: 1px solid #ffcccc; }
     </style>
 </head>
 <body>
@@ -88,25 +129,42 @@ $users = $conn->query("SELECT * FROM users ORDER BY role DESC");
 </div>
 
 <div class="main-content">
-    <div class="header">
-        <div>
-            <h2 style="font-weight: 600;">Danh sách người dùng</h2>
-            <p style="color: var(--apple-gray); font-size: 13px;">Quản lý tài khoản khách hàng và phân quyền</p>
-        </div>
-        <div style="text-align: right;">
-            <div style="font-weight: 500;"><i class="far fa-calendar-alt"></i> <?= date('d/m/Y') ?></div>
-        </div>
-    </div>
+    <h2 style="margin-bottom: 20px;">Hệ thống người dùng</h2>
 
-    <?php if (isset($message)): ?>
-        <div class="alert <?= ($type == 'success') ? 'alert-success' : 'alert-error' ?>">
-            <i class="<?= ($type == 'success') ? 'fas fa-check-circle' : 'fas fa-exclamation-circle' ?>"></i>
-            <?= $message ?>
-        </div>
+    <?php if ($message): ?>
+        <div class="alert <?= ($type == 'success') ? 'alert-success' : 'alert-error' ?>"><?= $message ?></div>
     <?php endif; ?>
 
     <div class="card">
-        <h3>Tất cả thành viên</h3>
+        <h3 style="margin-bottom: 15px; font-size: 16px;">Đăng ký tài khoản</h3>
+        <form method="POST">
+            <div class="reg-grid">
+                <div class="form-group"><label>Họ và tên</label><input type="text" name="fullname" required></div>
+                <div class="form-group"><label>Email đăng nhập</label><input type="email" name="email" required></div>
+                <div class="form-group"><label>Số điện thoại</label><input type="text" name="phone"></div>
+                <div class="form-group">
+                    <label>Giới tính</label>
+                    <select name="gender">
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Ngày sinh</label><input type="date" name="date_of_birth"></div>
+                <div class="form-group">
+                    <label>Vai trò</label>
+                    <select name="role">
+                        <option value="customer">CUSTOMER</option>
+                        <option value="admin">ADMIN</option>
+                    </select>
+                </div>
+                <div class="form-group" style="grid-column: span 2;"><label>Địa chỉ</label><textarea name="address" rows="2"></textarea></div>
+            </div>
+            <button type="submit" name="add_user" class="btn-add">Khởi tạo thành viên</button>
+        </form>
+    </div>
+
+    <div class="card">
         <table>
             <thead>
                 <tr>
@@ -115,49 +173,41 @@ $users = $conn->query("SELECT * FROM users ORDER BY role DESC");
                     <th>Email</th>
                     <th>Vai trò</th>
                     <th>Trạng thái</th>
-                    <th>Ngày tham gia</th>
                     <th style="text-align: right;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
                 <?php
-                $result = $conn->query("SELECT id, fullname, email, role, status, created_at FROM users ORDER BY created_at DESC");
-                if ($result && $result->num_rows > 0):
-                    while($row = $result->fetch_assoc()):
+                $res = $conn->query("SELECT * FROM users ORDER BY id DESC");
+                while($row = $res->fetch_assoc()):
                 ?>
                 <tr>
-                    <td>#<?= $row['id'] ?></td>
-                    <td style="font-weight: 600;"><?= htmlspecialchars($row['fullname']) ?></td>
+                    <td style="color: #888;">#<?= $row['id'] ?></td>
+                    <td><b><?= htmlspecialchars($row['fullname']) ?></b></td>
                     <td><?= htmlspecialchars($row['email']) ?></td>
-                    <td><span style="letter-spacing: 0.5px; font-size: 12px;"><?= strtoupper($row['role']) ?></span></td>
+                    <td style="font-size: 11px; font-weight: bold;"><?= strtoupper($row['role']) ?></td>
                     <td>
                         <span class="status-badge <?= $row['status'] == 1 ? 'status-active' : 'status-locked' ?>">
-                            <?= $row['status'] == 1 ? '● Hoạt động' : '● Đã khóa' ?>
+                            ● <?= $row['status'] == 1 ? 'Hoạt động' : 'Đã khóa' ?>
                         </span>
                     </td>
-                    <td style="color: var(--apple-gray);"><?= date('d/m/Y', strtotime($row['created_at'])) ?></td>
-                    <td style="text-align: right;">
+                    <td>
+                        <div class="btn-group">
                         <?php if ($row['id'] != ($_SESSION['user_id'] ?? 0)): ?>
+                            <a href="users.php?reset_id=<?= $row['id'] ?>" class="btn-action btn-reset" onclick="return confirm('Reset về 123456?')"><i class="fas fa-sync-alt"></i> Reset</a>
+                            
                             <?php if ($row['status'] == 1): ?>
-                                <a href="users.php?toggle_id=<?= $row['id'] ?>" class="btn btn-lock" onclick="return confirm('Khóa tài khoản này?')">
-                                    <i class="fas fa-user-slash"></i> Khóa
-                                </a>
+                                <a href="users.php?toggle_id=<?= $row['id'] ?>" class="btn-action btn-lock"><i class="fas fa-lock"></i> Khóa</a>
                             <?php else: ?>
-                                <a href="users.php?toggle_id=<?= $row['id'] ?>" class="btn btn-unlock" onclick="return confirm('Mở khóa tài khoản?')">
-                                    <i class="fas fa-user-check"></i> Mở
-                                </a>
+                                <a href="users.php?toggle_id=<?= $row['id'] ?>" class="btn-action btn-unlock"><i class="fas fa-unlock"></i> Mở</a>
                             <?php endif; ?>
-                            <a href="users.php?delete_id=<?= $row['id'] ?>" class="btn btn-delete" onclick="return confirm('Xóa vĩnh viễn?')">
-                                <i class="fas fa-trash"></i>
-                            </a>
                         <?php else: ?>
-                            <span style="color: var(--apple-gray); font-style: italic; font-size: 12px;">Đang đăng nhập</span>
+                            <span style="font-size: 12px; color: #999; font-style: italic;">Đang đăng nhập</span>
                         <?php endif; ?>
+                        </div>
                     </td>
                 </tr>
-                <?php endwhile; else: ?>
-                    <tr><td colspan="7" style="text-align:center; padding: 40px; color: var(--apple-gray);">Không tìm thấy người dùng nào.</td></tr>
-                <?php endif; ?>
+                <?php endwhile; ?>
             </tbody>
         </table>
     </div>
