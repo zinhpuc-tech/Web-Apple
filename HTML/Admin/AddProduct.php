@@ -12,7 +12,6 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
 if (isset($_POST['add_product'])) {
 
     $name = $_POST['name'];
-    $price = (float)$_POST['price'];
     $cost_price = (float)$_POST['cost_price'];
     $quantity = (int)$_POST['quantity'];
     $category = $_POST['category'];
@@ -24,6 +23,9 @@ if (isset($_POST['add_product'])) {
     $profit_margin = 20;
     $status = 1;
 
+    $profit_margin = 20;
+    $price = $cost_price + ($cost_price * $profit_margin / 100);
+
     // Upload ảnh
     $image_name = $_FILES['image']['name'];
     $tmp = $_FILES['image']['tmp_name'];
@@ -34,7 +36,7 @@ if (isset($_POST['add_product'])) {
     // Insert DB
     $stmt = $conn->prepare("
         INSERT INTO products 
-        (name, price, cost_price, quantity, image_url, category, technical_info, sku, unit, profit_margin, status, description) 
+        (name, cost_price, price, quantity, image_url, category, technical_info, sku, unit, profit_margin, status, description) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
@@ -59,7 +61,7 @@ if (isset($_POST['add_product'])) {
     } else {
         echo "<script>alert('Lỗi: " . $conn->error . "');</script>";
     }
-}
+    }
 ?>
 
 
@@ -115,7 +117,7 @@ if (isset($_POST['add_product'])) {
         border: 2px solid black;
         border-radius: 12px;
         padding: 35px;
-        height: 950px;
+        height: 1050px;
         width: 500px;
         box-shadow: 0 4px 12px;
     }
@@ -197,6 +199,12 @@ if (isset($_POST['add_product'])) {
 
                     <label>Giá nhập</label>
                     <input type="number" name="cost_price">
+
+                    <label>Giá bán (tự động)</label>
+                    <input type="number" id="price" readonly>
+
+                    <label>Lợi nhuận (%)</label>
+                    <input type="number" id="profit_margin" value="20">
                     
                     <label>Số lượng</label>
                     <input type="number" name="quantity">
@@ -223,3 +231,19 @@ if (isset($_POST['add_product'])) {
     </main>
 </body>
 </html>
+
+<script>
+    function calculatePrice() {
+        let cost = document.querySelector('[name="cost_price"]').value;
+        let profit = document.getElementById('profit_margin').value;
+
+        if (cost && profit) {
+            let price = cost * (1 + profit / 100);
+            document.getElementById('price').value = Math.round(price);
+        }
+    }
+
+    // Bắt sự kiện khi nhập
+    document.querySelector('[name="cost_price"]').addEventListener('input', calculatePrice);
+    document.getElementById('profit_margin').addEventListener('input', calculatePrice);
+</script>
