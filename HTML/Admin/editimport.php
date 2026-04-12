@@ -61,7 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // 2. Update lại cost_price
         $conn->query("
             UPDATE products 
-            SET cost_price = $avg_price
+            SET 
+                cost_price = $avg_price,
+                price = $avg_price * (1 + profit_margin / 100)
             WHERE id = $product_id
         ");
 
