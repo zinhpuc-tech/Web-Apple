@@ -33,7 +33,7 @@ if (isset($_POST['add_product'])) {
 
     move_uploaded_file($tmp, "../../" . $path);
 
-    // Insert DB
+    // 1. Insert product trước
     $stmt = $conn->prepare("
         INSERT INTO products 
         (name, cost_price, price, quantity, image_url, category, technical_info, sku, unit, profit_margin, status, description) 
@@ -43,8 +43,8 @@ if (isset($_POST['add_product'])) {
     $stmt->bind_param(
         "sddisssssiss",
         $name,
+        $cost_price,   // ⚠️ sửa lại đúng thứ tự luôn
         $price,
-        $cost_price,
         $quantity,
         $path,
         $category,
@@ -57,41 +57,57 @@ if (isset($_POST['add_product'])) {
     );
 
     if ($stmt->execute()) {
+
+        // 2. Lấy ID sau khi insert thành công
+        $product_id = $conn->insert_id;
+
+        // 3. Insert import_details
+        $stmt2 = $conn->prepare("
+        INSERT INTO import_details (product_id, quantity, price, created_at)
+        VALUES (?, ?, ?, NOW())
+    ");
+        $stmt2->bind_param("iid", $product_id, $quantity, $cost_price); // ⚠️ nên dùng giá nhập
+        $stmt2->execute();
+
         echo "<script>alert('Thêm sản phẩm thành công!');</script>";
     } else {
         echo "<script>alert('Lỗi: " . $conn->error . "');</script>";
     }
-    }
+}
 ?>
 
 
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="../../hinhanh/apple-icon.ico">
     <title>Itronic - Add Product</title>
-    
+
 </head>
 
 
 <style>
-    body{
+    body {
         background-color: white;
         margin: 0;
     }
+
     /* header */
-    header{
+    header {
         background-color: black;
         padding: 15px 40px;
         color: white;
     }
-    .header-menu{
+
+    .header-menu {
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    .header-logo{
+
+    .header-logo {
         display: flex;
         gap: 10px;
         align-items: center;
@@ -99,21 +115,24 @@ if (isset($_POST['add_product'])) {
         font-weight: bold;
         font-size: 20px;
     }
-    .header-logo img{
+
+    .header-logo img {
         width: 50px;
         height: 50px;
         padding: 5px;
         border: none;
         border-radius: 30px;
     }
+
     /* main */
-    main{
+    main {
         padding: 30px;
         display: flex;
         justify-content: center;
         align-items: center;
     }
-    .table_add_product{
+
+    .table_add_product {
         border: 2px solid black;
         border-radius: 12px;
         padding: 35px;
@@ -121,27 +140,32 @@ if (isset($_POST['add_product'])) {
         width: 500px;
         box-shadow: 0 4px 12px;
     }
-    .table_add_product h2{
+
+    .table_add_product h2 {
         text-align: center;
         font-size: 30px;
         margin-bottom: 22px;
     }
-    .table_add_product label{
+
+    .table_add_product label {
         font-size: 25px;
     }
+
     .table_add_product input,
-    .table_add_product select{
+    .table_add_product select {
         width: 100%;
         padding: 8px;
         margin-bottom: 20px;
         border: 1px solid black;
         border-radius: 8px;
     }
+
     /* Nút */
-    .btn{
+    .btn {
         text-align: center;
     }
-    .btn_add{
+
+    .btn_add {
         border: none;
         border-radius: 8px;
         padding: 12px;
@@ -150,7 +174,8 @@ if (isset($_POST['add_product'])) {
         color: white;
         font-size: 15px;
     }
-    .btn_return{
+
+    .btn_return {
         border: none;
         border-radius: 8px;
         padding: 12px;
@@ -159,11 +184,13 @@ if (isset($_POST['add_product'])) {
         color: white;
         font-size: 15px;
     }
-    .btn_add:hover{
+
+    .btn_add:hover {
         background-color: rgb(13, 41, 73);
         transition: 0.3s;
     }
-    .btn_return:hover{
+
+    .btn_return:hover {
         background-color: rgb(13, 41, 73);
         transition: 0.3s;
     }
@@ -181,55 +208,56 @@ if (isset($_POST['add_product'])) {
     </header>
     <main>
         <div class="table_add_product">
-            <h2>Thêm danh mục</h2>    
-                <form method="POST" enctype="multipart/form-data">
+            <h2>Thêm danh mục</h2>
+            <form method="POST" enctype="multipart/form-data">
 
-                    <label>Tên sản phẩm</label>
-                    <input type="text" name="name" required>
+                <label>Tên sản phẩm</label>
+                <input type="text" name="name" required>
 
-                    <label>Danh mục</label>
-                    <select name="category">
-                        <option value="iphone">iPhone</option>
-                        <option value="ipad">iPad</option>
-                        <option value="mac">Mac</option>
-                    </select>
+                <label>Danh mục</label>
+                <select name="category">
+                    <option value="iphone">iPhone</option>
+                    <option value="ipad">iPad</option>
+                    <option value="mac">Mac</option>
+                </select>
 
-                    <label>SKU (Mã sản phẩm)</label>
-                    <input type="text" name="sku">
+                <label>SKU (Mã sản phẩm)</label>
+                <input type="text" name="sku">
 
-                    <label>Giá nhập</label>
-                    <input type="number" name="cost_price">
+                <label>Giá nhập</label>
+                <input type="number" name="cost_price">
 
-                    <label>Giá bán (tự động)</label>
-                    <input type="number" id="price" readonly>
+                <label>Giá bán (tự động)</label>
+                <input type="number" id="price" readonly>
 
-                    <label>Lợi nhuận (%)</label>
-                    <input type="number" id="profit_margin" value="20">
-                    
-                    <label>Số lượng</label>
-                    <input type="number" name="quantity">
+                <label>Lợi nhuận (%)</label>
+                <input type="number" id="profit_margin" value="20">
 
-                    <label>Đơn vị</label>
-                    <input type="text" name="unit">
+                <label>Số lượng</label>
+                <input type="number" name="quantity">
 
-                    <label>Thông số kỹ thuật</label>
-                    <input type="text" name="technical_info">
+                <label>Đơn vị</label>
+                <input type="text" name="unit">
 
-                    <label>Mô tả</label>
-                    <input type="text" name="description">
+                <label>Thông số kỹ thuật</label>
+                <input type="text" name="technical_info">
 
-                    <label>Ảnh</label>
-                    <input type="file" name="image">
+                <label>Mô tả</label>
+                <input type="text" name="description">
 
-                    <div class="btn">
-                        <button type="submit" name="add_product" class="btn_add">Thêm</button>
-                        <button type="button" class="btn_return" onclick="window.location.href='import-goods.php'">Quay về</button>
-                    </div>
+                <label>Ảnh</label>
+                <input type="file" name="image">
 
-                </form>
-            </div>
+                <div class="btn">
+                    <button type="submit" name="add_product" class="btn_add">Thêm</button>
+                    <button type="button" class="btn_return" onclick="window.location.href='import-goods.php'">Quay về</button>
+                </div>
+
+            </form>
+        </div>
     </main>
 </body>
+
 </html>
 
 <script>

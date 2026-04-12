@@ -8,28 +8,83 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
     exit();
 }
 
-$id = $_GET['id'];
+// Kiểm tra id tồn tại
+if (!isset($_GET['id'])) {
+    die("Thiếu ID!");
+}
+
+$id = (int)$_GET['id'];
 
 // Lấy dữ liệu
 $sql = "SELECT i.*, p.name 
         FROM import_details i
         JOIN products p ON p.id = i.product_id
         WHERE i.id = $id";
+
 $result = $conn->query($sql);
+
+if (!$result || $result->num_rows == 0) {
+    die("Không tìm thấy dữ liệu!");
+}
+
 $row = $result->fetch_assoc();
 
 // Update
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $quantity = $_POST['quantity'];
-    $price = $_POST['price'];
 
-    $conn->query("
+    if (!isset($_POST['quantity'], $_POST['price'])) {
+        die("Thiếu dữ liệu!");
+    }
+
+    $quantity = (int)$_POST['quantity'];
+    $price = (float)$_POST['price'];
+
+    $sql_update = "
         UPDATE import_details 
         SET quantity = $quantity, price = $price
         WHERE id = $id
-    ");
+    ";
 
-    echo "<script>alert('Cập nhật thành công!'); window.location='historyimport.php';</script>";
+    if ($conn->query($sql_update)) {
+        $product_id = $row['product_id'];
+
+        // 1. Tính giá nhập trung bình
+        $res = $conn->query("
+            SELECT AVG(price) as avg_price 
+            FROM import_details 
+            WHERE product_id = $product_id
+        ");
+
+        $data = $res->fetch_assoc();
+        $avg_price = $data['avg_price'] ?? 0;
+
+        // 2. Update lại cost_price
+        $conn->query("
+            UPDATE products 
+            SET cost_price = $avg_price
+            WHERE id = $product_id
+        ");
+
+        $res = $conn->query("
+            SELECT SUM(quantity) as total_qty
+            FROM import_details
+            WHERE product_id = $product_id
+        ");
+
+        $data = $res->fetch_assoc();
+        $total_qty = $data['total_qty'] ?? 0;
+
+        $conn->query("
+            UPDATE products
+            SET quantity = $total_qty
+            WHERE id = $product_id
+        ");
+
+        echo "<script>alert('Cập nhật thành công!'); window.location='historyimport.php';</script>";
+        exit();
+    } else {
+        echo "Lỗi SQL: " . $conn->error;
+    }
 }
 ?>
 <!DOCTYPE html>
