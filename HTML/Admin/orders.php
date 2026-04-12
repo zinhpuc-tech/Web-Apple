@@ -294,6 +294,8 @@ $orders = $conn->query($sql);
                         <th>Khách hàng</th>
                         <th>Tổng tiền</th>
                         <th>Trạng thái</th>
+                        <th>Phường</th>
+                        <th>Chi tiết đơn hàng</th>
                         <th>Hành động</th>
                     </tr>
                 </thead>
@@ -311,6 +313,7 @@ $orders = $conn->query($sql);
                                     <?= $row['status'] == 'pending' ? 'Chờ duyệt' : ($row['status'] == 'processing' ? 'Đang giao' : 'Hoàn tất') ?>
                                 </span>
                             </td>
+                            <td><?= htmlspecialchars($row['address']) ?></td>
                             <td>
                                 <div class="action-group">
                                     <a href="order_detail.php?id=<?= $row['id'] ?>" class="btn-view" title="Xem chi tiết">
