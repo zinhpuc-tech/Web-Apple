@@ -10,8 +10,11 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
 $from = $_GET['from'] ?? '';
 $to = $_GET['to'] ?? '';
 
+$keyword = $_GET['keyword'] ?? '';
+
 $sql = "
     SELECT 
+        i.id,
         i.created_at,
         p.name AS product_name,
         i.quantity,
@@ -21,6 +24,10 @@ $sql = "
     JOIN products p ON p.id = i.product_id
     WHERE 1=1
 ";
+
+if (!empty($keyword)) {
+    $sql .= " AND p.name LIKE '%$keyword%'";
+}
 
 if (!empty($from)) {
     $sql .= " AND DATE(i.created_at) >= '$from'";
@@ -150,6 +157,10 @@ $result = $conn->query($sql);
             cursor: pointer;
         }
 
+        button:hover {
+            transform: scale(1.03);
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -174,6 +185,27 @@ $result = $conn->query($sql);
             margin-top: 20px;
             font-weight: 600;
             color: var(--apple-blue);
+        }
+
+        .find_product {
+            display: flex;
+            gap: 2px;
+            margin: 15px 0px;
+        }
+
+        .find_product input {
+            padding: 8px;
+            width: 25%;
+        }
+
+        .find_product button[type="button"] {
+            background: #ff3b30;
+            color: white;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            padding: 0;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -211,6 +243,19 @@ $result = $conn->query($sql);
                 <button type="submit"><i class="fas fa-filter"></i> Lọc</button>
             </form>
 
+            <form method="GET" class="find_product">
+                <input type="text" name="keyword" placeholder="Nhập sản phẩm cần tìm" value="<?= $_GET['keyword'] ?? '' ?>">
+                <button type="submit">Tìm kiếm</button>
+
+                <?php if (!empty($keyword)): ?>
+                    <button type="button"
+                        onclick="window.location.href='historyimport.php'"
+                        style="background:#ff3b30;">
+                        ✖
+                    </button>
+                <?php endif; ?>
+            </form>
+
             <table>
                 <thead>
                     <tr>
@@ -219,6 +264,7 @@ $result = $conn->query($sql);
                         <th>Số lượng</th>
                         <th>Giá nhập</th>
                         <th>Tổng</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
 
@@ -234,6 +280,11 @@ $result = $conn->query($sql);
                             <td><?= $row['quantity'] ?></td>
                             <td><?= number_format($row['price']) ?></td>
                             <td><?= number_format($row['total']) ?></td>
+                            <td>
+                                <button onclick="window.location.href='editimport.php?id=<?= $row['id'] ?>'">
+                                    <i class="fas fa-edit"></i> Sửa
+                                </button>
+                            </td>
                         </tr>
                     <?php endwhile; ?>
                 </tbody>
