@@ -1,6 +1,7 @@
 <?php
 session_start();
-include '../PHP/db_connect.php';     // ← Chỉnh đường dẫn cho đúng (tùy vị trí file của bạn)
+include '../PHP/db_connect.php';    // ← Chỉnh đường dẫn cho đúng (tùy vị trí file của bạn)
+include '../PHP/cart_functions.php';
 
 // ====================== LOGOUT USER ======================
 if (isset($_SESSION['user_id'])) {
